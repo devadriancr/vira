@@ -20,8 +20,11 @@ class ViraApp extends StatelessWidget {
         title: 'Vira',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2196F3),
+            seedColor: const Color(0xFF0000FF), // Azul puro
             brightness: Brightness.light,
+            primary: const Color(0xFF0000FF),
+            secondary: const Color(0xFF42A5F5), // Azul claro
+            tertiary: const Color(0xFF90CAF9), // Azul muy claro
           ),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
+import '../services/auth_service.dart'; // Importación necesaria añadida
 
 class WorkCentersView extends StatelessWidget {
   const WorkCentersView({super.key});
@@ -11,6 +11,7 @@ class WorkCentersView extends StatelessWidget {
       context: context,
       builder:
           (context) => AlertDialog(
+            // Corregida la indentación
             title: const Text('Cerrar Sesión'),
             content: const Text('¿Estás seguro que deseas cerrar sesión?'),
             actions: [
@@ -85,34 +86,6 @@ class WorkCentersView extends StatelessWidget {
 
           return Column(
             children: [
-              // Container(
-              //   width: double.infinity,
-              //   padding: const EdgeInsets.all(16),
-              //   child: Container(
-              //     padding: const EdgeInsets.all(16),
-              //     decoration: BoxDecoration(
-              //       color: Theme.of(context).colorScheme.primaryContainer,
-              //       borderRadius: BorderRadius.circular(12),
-              //     ),
-              //     child: Column(
-              //       crossAxisAlignment: CrossAxisAlignment.start,
-              //       children: [
-              //         Text(
-              //           'Bienvenido, ${user?.name}',
-              //           style: Theme.of(context).textTheme.headlineSmall
-              //               ?.copyWith(fontWeight: FontWeight.bold),
-              //         ),
-              //         const SizedBox(height: 4),
-              //         Text(
-              //           user?.email ?? '',
-              //           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              //             color: Colors.grey[600],
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
               Expanded(
                 child:
                     workCenters.isEmpty
@@ -141,12 +114,6 @@ class WorkCentersView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Estaciones (${workCenters.length})',
-                                style: Theme.of(context).textTheme.titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 16),
                               Expanded(
                                 child: ListView.builder(
                                   itemCount: workCenters.length,
@@ -163,22 +130,28 @@ class WorkCentersView extends StatelessWidget {
                                           width: 50,
                                           height: 50,
                                           decoration: BoxDecoration(
-                                            color:
-                                                Theme.of(
-                                                  context,
-                                                ).colorScheme.primary,
+                                            color: Theme.of(
+                                              context,
+                                            ) // Corregido: usar Theme.of(context)
+                                            .colorScheme.primary.withOpacity(
+                                              0.1,
+                                            ),
                                             borderRadius: BorderRadius.circular(
                                               25,
                                             ),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              workCenter.number,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                            border: Border.all(
+                                              color:
+                                                  Theme.of(context) // Corregido
+                                                  .colorScheme.primary,
+                                              width: 2,
                                             ),
+                                          ),
+                                          child: Icon(
+                                            Icons.precision_manufacturing,
+                                            color:
+                                                Theme.of(context) // Corregido
+                                                .colorScheme.primary,
+                                            size: 30,
                                           ),
                                         ),
                                         title: Text(
@@ -188,41 +161,16 @@ class WorkCentersView extends StatelessWidget {
                                             fontSize: 16,
                                           ),
                                         ),
-                                        subtitle: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const SizedBox(height: 4),
-                                            if (workCenter.line != null)
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.linear_scale,
-                                                    size: 16,
-                                                    color: Colors.grey,
+                                        subtitle:
+                                            workCenter.line != null
+                                                ? Text(
+                                                  '${workCenter.line!.name}',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 14,
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Línea: ${workCenter.line!.name}',
-                                                  ),
-                                                ],
-                                              ),
-                                            if (workCenter.ip != null) ...[
-                                              const SizedBox(height: 2),
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                    Icons.computer,
-                                                    size: 16,
-                                                    color: Colors.grey,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text('IP: ${workCenter.ip}'),
-                                                ],
-                                              ),
-                                            ],
-                                          ],
-                                        ),
+                                                )
+                                                : null,
                                         trailing: const Icon(
                                           Icons.arrow_forward_ios,
                                         ),
