@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart'; // Importación necesaria añadida
+import '../services/auth_service.dart';
+import 'material_validation_view.dart';
 
 class WorkCentersView extends StatelessWidget {
   const WorkCentersView({super.key});
@@ -175,15 +176,15 @@ class WorkCentersView extends StatelessWidget {
                                           Icons.arrow_forward_ios,
                                         ),
                                         onTap: () {
-                                          ScaffoldMessenger.of(
+                                          // Navegar a la nueva vista de validación de materiales
+                                          Navigator.push(
                                             context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Seleccionaste: ${workCenter.name}',
-                                              ),
-                                              behavior:
-                                                  SnackBarBehavior.floating,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (context) =>
+                                                      MaterialValidationView(
+                                                        workCenter: workCenter,
+                                                      ),
                                             ),
                                           );
                                         },
