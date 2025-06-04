@@ -55,14 +55,17 @@ class AppRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        if (authService.isLoading) {
+        // Si está cargando inicialmente o cerrando sesión, mostrar splash
+        if (authService.isLoading || authService.isLoggingOut) {
           return const SplashView();
         }
 
+        // Si está autenticado, mostrar centros de trabajo
         if (authService.isAuthenticated) {
           return const WorkCentersView();
         }
 
+        // Si no está autenticado, mostrar login
         return const LoginView();
       },
     );

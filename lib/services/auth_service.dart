@@ -12,6 +12,7 @@ class AuthService extends ChangeNotifier {
   String? _token;
   List<WorkCenter> _workCenters = [];
   bool _isLoading = true;
+  bool _isLoggingOut = false; // Nuevo estado para logout
   String? _error;
 
   User? get user => _user;
@@ -19,6 +20,7 @@ class AuthService extends ChangeNotifier {
   List<WorkCenter> get workCenters => _workCenters;
   bool get isAuthenticated => _user != null && _token != null;
   bool get isLoading => _isLoading;
+  bool get isLoggingOut => _isLoggingOut; // Getter para el estado de logout
   String? get error => _error;
 
   AuthService() {
@@ -109,6 +111,13 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
+      // Activar estado de logout
+      _isLoggingOut = true;
+      notifyListeners();
+
+      // Pequeña pausa para mostrar el splash
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (_token != null) {
         await http.post(
           Uri.parse('$_baseUrl/logout'),
@@ -121,10 +130,12 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error during logout: $e');
     } finally {
+      // Limpiar todos los datos
       _user = null;
       _token = null;
       _workCenters = [];
       _error = null;
+      _isLoggingOut = false;
       await _storage.delete(key: 'auth_token');
       notifyListeners();
     }

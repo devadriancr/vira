@@ -5,66 +5,114 @@ import '../services/auth_service.dart';
 class WorkCentersView extends StatelessWidget {
   const WorkCentersView({super.key});
 
+  Future<void> _handleLogout(BuildContext context) async {
+    // Mostrar diálogo de confirmación
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cerrar Sesión'),
+            content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Cerrar Sesión'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldLogout == true) {
+      // Cerrar el popup menu primero
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      // Ejecutar logout
+      await context.read<AuthService>().logout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Centros de Trabajo'),
         actions: [
-          PopupMenuButton(
-            icon: const Icon(Icons.account_circle),
-            itemBuilder:
-                (context) => [
-                  PopupMenuItem(
-                    child: const ListTile(
-                      leading: Icon(Icons.logout),
-                      title: Text('Cerrar Sesión'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.read<AuthService>().logout();
-                    },
-                  ),
-                ],
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              return PopupMenuButton(
+                icon: const Icon(Icons.account_circle),
+                itemBuilder:
+                    (context) => [
+                      PopupMenuItem(
+                        child: ListTile(
+                          leading:
+                              authService.isLoggingOut
+                                  ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Icon(Icons.logout),
+                          title: Text(
+                            authService.isLoggingOut
+                                ? 'Cerrando...'
+                                : 'Cerrar Sesión',
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onTap:
+                            authService.isLoggingOut
+                                ? null
+                                : () => _handleLogout(context),
+                      ),
+                    ],
+              );
+            },
           ),
         ],
       ),
       body: Consumer<AuthService>(
         builder: (context, authService, child) {
-          final user = authService.user;
           final workCenters = authService.workCenters;
 
           return Column(
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Bienvenido, ${user?.name}',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.email ?? '',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              // Container(
+              //   width: double.infinity,
+              //   padding: const EdgeInsets.all(16),
+              //   child: Container(
+              //     padding: const EdgeInsets.all(16),
+              //     decoration: BoxDecoration(
+              //       color: Theme.of(context).colorScheme.primaryContainer,
+              //       borderRadius: BorderRadius.circular(12),
+              //     ),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         Text(
+              //           'Bienvenido, ${user?.name}',
+              //           style: Theme.of(context).textTheme.headlineSmall
+              //               ?.copyWith(fontWeight: FontWeight.bold),
+              //         ),
+              //         const SizedBox(height: 4),
+              //         Text(
+              //           user?.email ?? '',
+              //           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              //             color: Colors.grey[600],
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
               Expanded(
                 child:
                     workCenters.isEmpty
@@ -94,7 +142,7 @@ class WorkCentersView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Tus Centros de Trabajo (${workCenters.length})',
+                                'Estaciones (${workCenters.length})',
                                 style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
@@ -179,7 +227,6 @@ class WorkCentersView extends StatelessWidget {
                                           Icons.arrow_forward_ios,
                                         ),
                                         onTap: () {
-                                          // Aquí puedes navegar a la vista de detalles del centro de trabajo
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(

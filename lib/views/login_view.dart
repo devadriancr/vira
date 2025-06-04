@@ -57,14 +57,6 @@ class _LoginViewState extends State<LoginView> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Inicia sesión para continuar',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
-                ),
                 const SizedBox(height: 48),
                 TextFormField(
                   controller: _emailController,
