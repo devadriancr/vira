@@ -45,7 +45,7 @@ class MaterialValidationController {
     };
   }
 
-  static Future<void> sendValidationToAPI({
+  static Future<List<String>?> sendValidationToAPI({
     required String containerCode,
     required String visualAidCode,
     required String finalLabelCode,
@@ -79,6 +79,9 @@ class MaterialValidationController {
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         print('Validación enviada exitosamente: ${data['message']}');
+        if (data['access_errors'] != null) {
+          return List<String>.from(data['access_errors']);
+        }
       } else if (response.statusCode == 422) {
         final error = jsonDecode(response.body);
         throw Exception('Error de validación: ${error['message']}');
@@ -91,6 +94,8 @@ class MaterialValidationController {
       print('Error enviando validación a la API: $e');
       rethrow;
     }
+
+    return null;
   }
 
   static Future<List<Map<String, dynamic>>> getValidationHistory({

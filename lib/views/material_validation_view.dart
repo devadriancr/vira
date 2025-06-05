@@ -76,38 +76,38 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
         final isValid = validationResult['isValid'] as bool;
         final partNumber = validationResult['partNumber'] as String?;
 
-        await MaterialValidationController.sendValidationToAPI(
-          containerCode: containerCode,
-          visualAidCode: visualAidCode,
-          finalLabelCode: finalLabelCode,
-          isValid: isValid,
-          workCenterId: widget.workCenter.id,
-          partNumber: partNumber,
-        );
-
-        if (mounted) {
-          if (isValid) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('¡Validación Exitosa!'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                duration: const Duration(seconds: 2),
-              ),
+        final accessErrors =
+            await MaterialValidationController.sendValidationToAPI(
+              containerCode: _containerController.text,
+              visualAidCode: _visualAidController.text,
+              finalLabelCode: _finalLabelController.text,
+              isValid: isValid,
+              workCenterId: widget.workCenter.id,
+              partNumber: partNumber,
             );
-          } else {
+
+        // Mostrar notificaciones
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isValid ? '¡Validación Exitosa!' : 'Error en la Validación',
+              ),
+              backgroundColor: isValid ? Colors.green : Colors.red,
+            ),
+          );
+
+          if (accessErrors != null && accessErrors.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error en la Validación'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
+                content: Text(accessErrors.join('\n')),
+                backgroundColor: Colors.orange,
                 duration: const Duration(seconds: 2),
               ),
             );
           }
 
-          // Resetear el formulario después de mostrar la notificación
-          Future.delayed(const Duration(milliseconds: 1000), _resetForm);
+          _resetForm();
         }
       } catch (e) {
         if (mounted) {
@@ -116,10 +116,10 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               content: Text('Error al enviar datos: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 2),
             ),
           );
-          Future.delayed(const Duration(milliseconds: 3100), _resetForm);
+          Future.delayed(const Duration(milliseconds: 1000), _resetForm);
         }
       } finally {
         if (mounted) {
