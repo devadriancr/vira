@@ -21,6 +21,8 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   final FocusNode _visualAidFocus = FocusNode();
   final FocusNode _containerFocus = FocusNode();
 
+  bool _isSubmitting = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,75 +57,97 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   }
 
   Future<void> _validateAndSubmit() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && !_isSubmitting) {
+      setState(() {
+        _isSubmitting = true;
+      });
+
       final containerCode = _containerController.text;
       final visualAidCode = _visualAidController.text;
       final finalLabelCode = _finalLabelController.text;
 
       try {
-        final isValid = await MaterialValidationController.validate(
+        final validationResult = await MaterialValidationController.validate(
           containerCode,
           visualAidCode,
           finalLabelCode,
         );
 
-        if (isValid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '¡Validación exitosa para ${widget.workCenter.name}!',
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Error en la validación para ${widget.workCenter.name}',
-              ),
-              backgroundColor: Colors.orange,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
+        final isValid = validationResult['isValid'] as bool;
+        final partNumber = validationResult['partNumber'] as String?;
 
-        // Resetear el formulario después de mostrar la notificación
-        Future.delayed(const Duration(milliseconds: 2100), _resetForm);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
+        await MaterialValidationController.sendValidationToAPI(
+          containerCode: containerCode,
+          visualAidCode: visualAidCode,
+          finalLabelCode: finalLabelCode,
+          isValid: isValid,
+          workCenterId: widget.workCenter.id,
+          partNumber: partNumber,
         );
-        Future.delayed(const Duration(milliseconds: 2100), _resetForm);
+
+        if (mounted) {
+          if (isValid) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('¡Validación Exitosa!'),
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error en la Validación'),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+
+          // Resetear el formulario después de mostrar la notificación
+          Future.delayed(const Duration(milliseconds: 1000), _resetForm);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al enviar datos: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          Future.delayed(const Duration(milliseconds: 3100), _resetForm);
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+          });
+        }
       }
     }
   }
 
   String? _validateFinalLabel(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa la etiqueta final';
+      return 'La etiqueta final no puede estar vacía.';
     }
     return null;
   }
 
   String? _validateVisualAid(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa la ayuda visual';
+      return 'La ayuda visual no puede estar vacía.';
     }
     return null;
   }
 
   String? _validateContainer(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Por favor ingresa el contenedor';
+      return 'El contenedor no puede estar vacío.';
     }
     return null;
   }
@@ -131,7 +155,23 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.workCenter.name)),
+      appBar: AppBar(
+        title: Text(widget.workCenter.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              // Navegar al historial de validaciones
+              Navigator.pushNamed(
+                context,
+                '/validation-history',
+                arguments: widget.workCenter,
+              );
+            },
+            tooltip: 'Historial',
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -142,14 +182,15 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               TextFormField(
                 controller: _finalLabelController,
                 focusNode: _finalLabelFocus,
+                enabled: !_isSubmitting,
                 decoration: InputDecoration(
                   labelText: 'Etiqueta Final',
                   prefixIcon: Icon(
                     Icons.local_offer,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
@@ -164,14 +205,15 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               TextFormField(
                 controller: _visualAidController,
                 focusNode: _visualAidFocus,
+                enabled: !_isSubmitting,
                 decoration: InputDecoration(
                   labelText: 'Ayuda visual',
                   prefixIcon: Icon(
                     Icons.article,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
@@ -186,14 +228,15 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               TextFormField(
                 controller: _containerController,
                 focusNode: _containerFocus,
+                enabled: !_isSubmitting,
                 decoration: InputDecoration(
                   labelText: 'Contenedor',
                   prefixIcon: Icon(
                     Icons.local_shipping,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
@@ -201,25 +244,35 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 validator: _validateContainer,
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) {
-                  _validateAndSubmit();
+                  if (!_isSubmitting) {
+                    _validateAndSubmit();
+                  }
                 },
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _validateAndSubmit,
+                onPressed: _isSubmitting ? null : _validateAndSubmit,
                 style: ElevatedButton.styleFrom(
-                  // backgroundColor: Theme.of(context).colorScheme.primary,
-                  // foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 1,
-                    ),
                   ),
                 ),
-                child: const Text('Verificar'),
+                child:
+                    _isSubmitting
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : const Text('Verificar'),
               ),
             ],
           ),

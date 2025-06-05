@@ -142,8 +142,9 @@ class WorkCentersView extends StatelessWidget {
                                             ),
                                             border: Border.all(
                                               color:
-                                                  Theme.of(context) // Corregido
-                                                  .colorScheme.primary,
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
                                               width: 2,
                                             ),
                                           ),

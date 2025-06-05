@@ -22,7 +22,8 @@ class ViraApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF0000FF), // Azul puro
             brightness: Brightness.light,
-            primary: const Color(0xFF0000FF),
+            // primary: const Color(0xFF0000FF),
+            primary: const Color(0xFF1565C0),
             secondary: const Color(0xFF42A5F5), // Azul claro
             tertiary: const Color(0xFF90CAF9), // Azul muy claro
           ),
