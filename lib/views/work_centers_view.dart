@@ -7,12 +7,10 @@ class WorkCentersView extends StatelessWidget {
   const WorkCentersView({super.key});
 
   Future<void> _handleLogout(BuildContext context) async {
-    // Mostrar diálogo de confirmación
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
-            // Corregida la indentación
             title: const Text('Cerrar Sesión'),
             content: const Text('¿Estás seguro que deseas cerrar sesión?'),
             actions: [
@@ -29,12 +27,6 @@ class WorkCentersView extends StatelessWidget {
     );
 
     if (shouldLogout == true) {
-      // Cerrar el popup menu primero
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
-      // Ejecutar logout
       await context.read<AuthService>().logout();
     }
   }
@@ -47,35 +39,22 @@ class WorkCentersView extends StatelessWidget {
         actions: [
           Consumer<AuthService>(
             builder: (context, authService, child) {
-              return PopupMenuButton(
-                icon: const Icon(Icons.account_circle),
-                itemBuilder:
-                    (context) => [
-                      PopupMenuItem(
-                        child: ListTile(
-                          leading:
-                              authService.isLoggingOut
-                                  ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                  : const Icon(Icons.logout),
-                          title: Text(
-                            authService.isLoggingOut
-                                ? 'Cerrando...'
-                                : 'Cerrar Sesión',
+              return IconButton(
+                icon:
+                    authService.isLoggingOut
+                        ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onTap:
-                            authService.isLoggingOut
-                                ? null
-                                : () => _handleLogout(context),
-                      ),
-                    ],
+                        )
+                        : const Icon(Icons.logout),
+                onPressed:
+                    authService.isLoggingOut
+                        ? null
+                        : () => _handleLogout(context),
               );
             },
           ),
@@ -131,12 +110,10 @@ class WorkCentersView extends StatelessWidget {
                                           width: 50,
                                           height: 50,
                                           decoration: BoxDecoration(
-                                            color: Theme.of(
-                                              context,
-                                            ) // Corregido: usar Theme.of(context)
-                                            .colorScheme.primary.withOpacity(
-                                              0.1,
-                                            ),
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(
                                               25,
                                             ),
@@ -151,8 +128,9 @@ class WorkCentersView extends StatelessWidget {
                                           child: Icon(
                                             Icons.precision_manufacturing,
                                             color:
-                                                Theme.of(context) // Corregido
-                                                .colorScheme.primary,
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
                                             size: 30,
                                           ),
                                         ),
@@ -177,7 +155,6 @@ class WorkCentersView extends StatelessWidget {
                                           Icons.arrow_forward_ios,
                                         ),
                                         onTap: () {
-                                          // Navegar a la nueva vista de validación de materiales
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(

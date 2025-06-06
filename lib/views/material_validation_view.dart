@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/work_center.dart';
 import '../controllers/material_validation_controller.dart';
+import 'validation_history_view.dart';
+import 'validation_statistics_view.dart';
+import 'result_view.dart'; // Importar la nueva vista
 
 class MaterialValidationView extends StatefulWidget {
   final WorkCenter workCenter;
@@ -56,6 +59,52 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     FocusScope.of(context).requestFocus(_finalLabelFocus);
   }
 
+  void _showOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Historial de Validaciones'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => ValidationHistoryView(
+                            workCenter: widget.workCenter,
+                          ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.bar_chart),
+                title: const Text('Estadísticas'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => ValidationStatisticsView(
+                            workCenter: widget.workCenter,
+                          ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _validateAndSubmit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       setState(() {
@@ -67,6 +116,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
       final finalLabelCode = _finalLabelController.text;
 
       try {
+        // Paso 1: Validar localmente
         final validationResult = await MaterialValidationController.validate(
           containerCode,
           visualAidCode,
@@ -76,27 +126,29 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
         final isValid = validationResult['isValid'] as bool;
         final partNumber = validationResult['partNumber'] as String?;
 
+        // Paso 2: Enviar a la API
         final accessErrors =
             await MaterialValidationController.sendValidationToAPI(
-              containerCode: _containerController.text,
-              visualAidCode: _visualAidController.text,
-              finalLabelCode: _finalLabelController.text,
+              containerCode: containerCode,
+              visualAidCode: visualAidCode,
+              finalLabelCode: finalLabelCode,
               isValid: isValid,
               workCenterId: widget.workCenter.id,
               partNumber: partNumber,
             );
 
-        // Mostrar notificaciones
+        // Paso 3: Navegar a la pantalla de resultados
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                isValid ? '¡Validación Exitosa!' : 'Error en la Validación',
-              ),
-              backgroundColor: isValid ? Colors.green : Colors.red,
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      ResultView(isValid: isValid, hasConnectionError: false),
             ),
           );
 
+          // Mostrar mensajes de acceso si los hay
           if (accessErrors != null && accessErrors.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -110,15 +162,17 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
           _resetForm();
         }
       } catch (e) {
+        // Error de conexión - mostrar pantalla de error
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al enviar datos: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      ResultView(isValid: false, hasConnectionError: true),
             ),
           );
+
           Future.delayed(const Duration(milliseconds: 1000), _resetForm);
         }
       } finally {
@@ -158,17 +212,50 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
       appBar: AppBar(
         title: Text(widget.workCenter.name),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              // Navegar al historial de validaciones
-              Navigator.pushNamed(
-                context,
-                '/validation-history',
-                arguments: widget.workCenter,
-              );
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (String value) {
+              if (value == 'history') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => ValidationHistoryView(
+                          workCenter: widget.workCenter,
+                        ),
+                  ),
+                );
+              } else if (value == 'statistics') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) => ValidationStatisticsView(
+                          workCenter: widget.workCenter,
+                        ),
+                  ),
+                );
+              }
             },
-            tooltip: 'Historial',
+            itemBuilder:
+                (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'history',
+                    child: ListTile(
+                      leading: Icon(Icons.history),
+                      title: Text('Historial'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'statistics',
+                    child: ListTile(
+                      leading: Icon(Icons.bar_chart),
+                      title: Text('Estadísticas'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
           ),
         ],
       ),

@@ -1,3 +1,5 @@
+// lib/controllers/material_validation_controller.dart
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -32,17 +34,133 @@ class MaterialValidationController {
     final containerBase = containerCode.substring(2);
     final visualAidBase = visualAidCode.substring(2);
 
-    // 4. Verificar coincidencia de códigos base
+    // 4. Determinar el tipo de validación según la presencia de '/'
+    return _validateBasedOnCombinations(
+      containerBase,
+      visualAidBase,
+      finalLabelCode,
+    );
+  }
+
+  /// Valida según los diferentes casos de combinaciones
+  static Map<String, dynamic> _validateBasedOnCombinations(
+    String containerBase,
+    String visualAidBase,
+    String finalLabelCode,
+  ) {
+    final containerHasSlash = containerBase.contains('/');
+    final visualAidHasSlash = visualAidBase.contains('/');
+
+    if (containerHasSlash && visualAidHasSlash) {
+      // Caso 2: Ambos tienen '/', validar coincidencia directa
+      return _validateDirectMatch(containerBase, visualAidBase, finalLabelCode);
+    } else if (containerHasSlash && !visualAidHasSlash) {
+      // Caso 1: Solo contenedor tiene '/', generar combinaciones
+      return _validateWithCombinations(
+        containerBase,
+        visualAidBase,
+        finalLabelCode,
+      );
+    } else {
+      // Caso original: Sin '/', validación tradicional
+      return _validateTraditional(containerBase, visualAidBase, finalLabelCode);
+    }
+  }
+
+  /// Caso 2: Validación directa cuando ambos tienen '/'
+  static Map<String, dynamic> _validateDirectMatch(
+    String containerBase,
+    String visualAidBase,
+    String finalLabelCode,
+  ) {
+    // Verificar coincidencia exacta
     if (containerBase != visualAidBase) {
       return {'isValid': false, 'partNumber': null};
     }
 
-    // 5. Verificar que el código base esté en la etiqueta final
+    // Buscar el texto completo en la etiqueta final
     final containsPart = finalLabelCode.contains(containerBase);
     return {
       'isValid': containsPart,
       'partNumber': containsPart ? containerBase : null,
     };
+  }
+
+  /// Caso 1: Validación con combinaciones cuando solo el contenedor tiene '/'
+  static Map<String, dynamic> _validateWithCombinations(
+    String containerBase,
+    String visualAidBase,
+    String finalLabelCode,
+  ) {
+    // Generar combinaciones del contenedor
+    final combinations = _generateCombinations(containerBase);
+
+    // Verificar si alguna combinación coincide con la ayuda visual
+    for (final combination in combinations) {
+      if (combination == visualAidBase) {
+        // Buscar esta combinación en la etiqueta final
+        final containsPart = finalLabelCode.contains(combination);
+        return {
+          'isValid': containsPart,
+          'partNumber': containsPart ? combination : null,
+        };
+      }
+    }
+
+    return {'isValid': false, 'partNumber': null};
+  }
+
+  /// Caso original: Validación tradicional sin '/'
+  static Map<String, dynamic> _validateTraditional(
+    String containerBase,
+    String visualAidBase,
+    String finalLabelCode,
+  ) {
+    // Verificar coincidencia de códigos base
+    if (containerBase != visualAidBase) {
+      return {'isValid': false, 'partNumber': null};
+    }
+
+    // Verificar que el código base esté en la etiqueta final
+    final containsPart = finalLabelCode.contains(containerBase);
+    return {
+      'isValid': containsPart,
+      'partNumber': containsPart ? containerBase : null,
+    };
+  }
+
+  /// Genera combinaciones a partir de un código con '/'
+  /// Ejemplo: "BDTT/BDTS70500" → ["BDTT70500", "BDTS70500"]
+  static List<String> _generateCombinations(String code) {
+    if (!code.contains('/')) {
+      return [code];
+    }
+
+    final parts = code.split('/');
+    if (parts.length != 2) {
+      return [code]; // Si no es exactamente 2 partes, devolver original
+    }
+
+    final prefix1 = parts[0];
+    final prefix2AndSuffix = parts[1];
+
+    // Encontrar donde termina el segundo prefijo
+    // Asumimos que el sufijo son los caracteres numéricos al final
+    String prefix2 = '';
+    String suffix = '';
+
+    // Separar el segundo prefijo del sufijo
+    final match = RegExp(r'^([A-Za-z]+)(.*)$').firstMatch(prefix2AndSuffix);
+    if (match != null) {
+      prefix2 = match.group(1)!;
+      suffix = match.group(2)!;
+    } else {
+      // Si no se puede separar, usar toda la cadena como prefix2
+      prefix2 = prefix2AndSuffix;
+      suffix = '';
+    }
+
+    return [prefix1 + suffix, prefix2 + suffix];
   }
 
   static Future<List<String>?> sendValidationToAPI({

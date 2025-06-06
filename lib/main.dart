@@ -44,6 +44,16 @@ class ViraApp extends StatelessWidget {
               vertical: 16,
             ),
           ),
+          // Colores personalizados para la aplicación
+          extensions: <ThemeExtension<dynamic>>[
+            CustomColors(
+              okColor: const Color(0xFF0000FF),
+              ngColor: const Color(0xFFFF0000),
+              connectionErrorColor: const Color(
+                0xFFFF8F00,
+              ), // Naranja para errores de conexión
+            ),
+          ],
         ),
         home: const AppRouter(),
         debugShowCheckedModeBanner: false,
@@ -73,5 +83,60 @@ class AppRouter extends StatelessWidget {
         return const LoginView();
       },
     );
+  }
+}
+
+@immutable
+class CustomColors extends ThemeExtension<CustomColors> {
+  const CustomColors({
+    required this.okColor,
+    required this.ngColor,
+    required this.connectionErrorColor,
+  });
+
+  final Color okColor;
+  final Color ngColor;
+  final Color connectionErrorColor;
+
+  @override
+  CustomColors copyWith({
+    Color? okColor,
+    Color? ngColor,
+    Color? connectionErrorColor,
+  }) {
+    return CustomColors(
+      okColor: okColor ?? this.okColor,
+      ngColor: ngColor ?? this.ngColor,
+      connectionErrorColor: connectionErrorColor ?? this.connectionErrorColor,
+    );
+  }
+
+  @override
+  CustomColors lerp(ThemeExtension<CustomColors>? other, double t) {
+    if (other is! CustomColors) {
+      return this;
+    }
+    return CustomColors(
+      okColor: Color.lerp(okColor, other.okColor, t) ?? okColor,
+      ngColor: Color.lerp(ngColor, other.ngColor, t) ?? ngColor,
+      connectionErrorColor:
+          Color.lerp(connectionErrorColor, other.connectionErrorColor, t) ??
+          connectionErrorColor,
+    );
+  }
+
+  // Método estático para acceder fácilmente a los colores desde el contexto
+  static CustomColors of(BuildContext context) {
+    return Theme.of(context).extension<CustomColors>() ??
+        const CustomColors(
+          okColor: Color(0xFF0000FF), // Azul por defecto
+          ngColor: Color(0xFFFF0000), // Rojo por defecto
+          connectionErrorColor: Color(0xFFFF8F00), // Naranja por defecto
+        );
+  }
+
+  @override
+  String toString() {
+    return 'CustomColors(okColor: $okColor, ngColor: $ngColor, connectionErrorColor: $connectionErrorColor)';
   }
 }
