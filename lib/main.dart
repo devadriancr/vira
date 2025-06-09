@@ -20,8 +20,12 @@ class ViraApp extends StatelessWidget {
         title: 'Vira',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2196F3),
+            seedColor: const Color(0xFF0000FF), // Azul puro
             brightness: Brightness.light,
+            // primary: const Color(0xFF0000FF),
+            primary: const Color(0xFF1565C0),
+            secondary: const Color(0xFF42A5F5), // Azul claro
+            tertiary: const Color(0xFF90CAF9), // Azul muy claro
           ),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
@@ -40,6 +44,16 @@ class ViraApp extends StatelessWidget {
               vertical: 16,
             ),
           ),
+          // Colores personalizados para la aplicación
+          extensions: <ThemeExtension<dynamic>>[
+            CustomColors(
+              okColor: const Color(0xFF0000FF),
+              ngColor: const Color(0xFFFF0000),
+              connectionErrorColor: const Color(
+                0xFFFF8F00,
+              ), // Naranja para errores de conexión
+            ),
+          ],
         ),
         home: const AppRouter(),
         debugShowCheckedModeBanner: false,
@@ -55,16 +69,74 @@ class AppRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        if (authService.isLoading) {
+        // Si está cargando inicialmente o cerrando sesión, mostrar splash
+        if (authService.isLoading || authService.isLoggingOut) {
           return const SplashView();
         }
 
+        // Si está autenticado, mostrar centros de trabajo
         if (authService.isAuthenticated) {
           return const WorkCentersView();
         }
 
+        // Si no está autenticado, mostrar login
         return const LoginView();
       },
     );
+  }
+}
+
+@immutable
+class CustomColors extends ThemeExtension<CustomColors> {
+  const CustomColors({
+    required this.okColor,
+    required this.ngColor,
+    required this.connectionErrorColor,
+  });
+
+  final Color okColor;
+  final Color ngColor;
+  final Color connectionErrorColor;
+
+  @override
+  CustomColors copyWith({
+    Color? okColor,
+    Color? ngColor,
+    Color? connectionErrorColor,
+  }) {
+    return CustomColors(
+      okColor: okColor ?? this.okColor,
+      ngColor: ngColor ?? this.ngColor,
+      connectionErrorColor: connectionErrorColor ?? this.connectionErrorColor,
+    );
+  }
+
+  @override
+  CustomColors lerp(ThemeExtension<CustomColors>? other, double t) {
+    if (other is! CustomColors) {
+      return this;
+    }
+    return CustomColors(
+      okColor: Color.lerp(okColor, other.okColor, t) ?? okColor,
+      ngColor: Color.lerp(ngColor, other.ngColor, t) ?? ngColor,
+      connectionErrorColor:
+          Color.lerp(connectionErrorColor, other.connectionErrorColor, t) ??
+          connectionErrorColor,
+    );
+  }
+
+  // Método estático para acceder fácilmente a los colores desde el contexto
+  static CustomColors of(BuildContext context) {
+    return Theme.of(context).extension<CustomColors>() ??
+        const CustomColors(
+          okColor: Color(0xFF0000FF), // Azul por defecto
+          ngColor: Color(0xFFFF0000), // Rojo por defecto
+          connectionErrorColor: Color(0xFFFF8F00), // Naranja por defecto
+        );
+  }
+
+  @override
+  String toString() {
+    return 'CustomColors(okColor: $okColor, ngColor: $ngColor, connectionErrorColor: $connectionErrorColor)';
   }
 }
