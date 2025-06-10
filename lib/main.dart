@@ -20,12 +20,12 @@ class ViraApp extends StatelessWidget {
         title: 'Vira',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0000FF), // Azul puro
+            seedColor: const Color(0xFF1D24CA),
             brightness: Brightness.light,
             // primary: const Color(0xFF0000FF),
-            primary: const Color(0xFF1565C0),
-            secondary: const Color(0xFF42A5F5), // Azul claro
-            tertiary: const Color(0xFF90CAF9), // Azul muy claro
+            primary: const Color(0xFF1D24CA),
+            secondary: const Color(0xFF646FD4),
+            tertiary: const Color(0xFF9BA3EB),
           ),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
@@ -47,11 +47,9 @@ class ViraApp extends StatelessWidget {
           // Colores personalizados para la aplicación
           extensions: <ThemeExtension<dynamic>>[
             CustomColors(
-              okColor: const Color(0xFF0000FF),
-              ngColor: const Color(0xFFFF0000),
-              connectionErrorColor: const Color(
-                0xFFFF8F00,
-              ), // Naranja para errores de conexión
+              okColor: const Color(0xFF0065F8),
+              ngColor: const Color(0xFFFC3C3C),
+              connectionErrorColor: const Color(0xFFFC7300),
             ),
           ],
         ),
@@ -124,7 +122,7 @@ class CustomColors extends ThemeExtension<CustomColors> {
   static CustomColors of(BuildContext context) {
     return Theme.of(context).extension<CustomColors>() ??
         const CustomColors(
-          okColor: Color(0xFF0000FF), // Azul por defecto
+          okColor: Color(0xFF1D24CA), // Azul por defecto
           ngColor: Color(0xFFFF0000), // Rojo por defecto
           connectionErrorColor: Color(0xFFFF8F00), // Naranja por defecto
         );

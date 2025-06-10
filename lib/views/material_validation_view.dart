@@ -27,7 +27,13 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).requestFocus(_finalLabelFocus);
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _finalLabelFocus.requestFocus();
+          }
+        });
+      }
     });
   }
 
@@ -47,13 +53,16 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     FocusScope.of(context).requestFocus(next);
   }
 
-  // Función para resetear el formulario y enfocar el primer campo
   void _resetForm() {
     _formKey.currentState?.reset();
     _finalLabelController.clear();
     _visualAidController.clear();
     _containerController.clear();
-    FocusScope.of(context).requestFocus(_finalLabelFocus);
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _finalLabelFocus.requestFocus();
+      }
+    });
   }
 
   Future<void> _validateAndSubmit() async {
@@ -67,7 +76,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
       final finalLabelCode = _finalLabelController.text;
 
       try {
-        // Paso 1: Validar localmente
         final validationResult = await MaterialValidationController.validate(
           containerCode,
           visualAidCode,
@@ -77,7 +85,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
         final isValid = validationResult['isValid'] as bool;
         final partNumber = validationResult['partNumber'] as String?;
 
-        // Paso 2: Enviar a la API
         final accessErrors =
             await MaterialValidationController.sendValidationToAPI(
               containerCode: containerCode,
@@ -87,7 +94,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               partNumber: partNumber,
             );
 
-        // Paso 3: Navegar a la pantalla de resultados
         if (mounted) {
           await Navigator.push(
             context,
@@ -98,7 +104,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             ),
           );
 
-          // Mostrar mensajes de acceso si los hay
           if (accessErrors != null && accessErrors.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -112,7 +117,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
           _resetForm();
         }
       } catch (e) {
-        // Error de conexión - mostrar pantalla de error
         if (mounted) {
           await Navigator.push(
             context,
@@ -158,9 +162,12 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenHeight < 600;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Validación de Materiales'),
+        title: const Text('Validación de Materiales'),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -169,14 +176,14 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ValidationHistoryView(),
+                    builder: (context) => const ValidationHistoryView(),
                   ),
                 );
               } else if (value == 'statistics') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ValidationStatisticsView(),
+                    builder: (context) => const ValidationStatisticsView(),
                   ),
                 );
               }
@@ -203,109 +210,127 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _finalLabelController,
-                focusNode: _finalLabelFocus,
-                enabled: !_isSubmitting,
-                decoration: InputDecoration(
-                  labelText: 'Etiqueta Final',
-                  prefixIcon: Icon(
-                    Icons.local_offer,
-                    color: Theme.of(context).colorScheme.primary,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          // Permite desplazamiento
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: isSmallScreen ? 8 : 24, // Padding vertical adaptable
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight - MediaQuery.of(context).padding.vertical,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!isSmallScreen) const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _finalLabelController,
+                    focusNode: _finalLabelFocus,
+                    enabled: !_isSubmitting,
+                    decoration: InputDecoration(
+                      labelText: 'Etiqueta Final',
+                      prefixIcon: Icon(
+                        Icons.local_offer,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14, // Reducción vertical
+                      ),
+                    ),
+                    validator: _validateFinalLabel,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      _fieldFocusChange(_finalLabelFocus, _visualAidFocus);
+                    },
                   ),
-                  border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  TextFormField(
+                    controller: _visualAidController,
+                    focusNode: _visualAidFocus,
+                    enabled: !_isSubmitting,
+                    decoration: InputDecoration(
+                      labelText: 'Ayuda visual',
+                      prefixIcon: Icon(
+                        Icons.article,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    validator: _validateVisualAid,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) {
+                      _fieldFocusChange(_visualAidFocus, _containerFocus);
+                    },
                   ),
-                ),
-                validator: _validateFinalLabel,
-                textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) {
-                  _fieldFocusChange(_finalLabelFocus, _visualAidFocus);
-                },
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  TextFormField(
+                    controller: _containerController,
+                    focusNode: _containerFocus,
+                    enabled: !_isSubmitting,
+                    decoration: InputDecoration(
+                      labelText: 'Contenedor',
+                      prefixIcon: Icon(
+                        Icons.local_shipping,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    validator: _validateContainer,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) {
+                      if (!_isSubmitting) {
+                        _validateAndSubmit();
+                      }
+                    },
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  ElevatedButton(
+                    onPressed: _isSubmitting ? null : _validateAndSubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                      ), // Reducción vertical
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child:
+                        _isSubmitting
+                            ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : const Text('Verificar'),
+                  ),
+                  // Espacio adicional en dispositivos pequeños
+                  if (isSmallScreen)
+                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _visualAidController,
-                focusNode: _visualAidFocus,
-                enabled: !_isSubmitting,
-                decoration: InputDecoration(
-                  labelText: 'Ayuda visual',
-                  prefixIcon: Icon(
-                    Icons.article,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                validator: _validateVisualAid,
-                textInputAction: TextInputAction.next,
-                onFieldSubmitted: (_) {
-                  _fieldFocusChange(_visualAidFocus, _containerFocus);
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _containerController,
-                focusNode: _containerFocus,
-                enabled: !_isSubmitting,
-                decoration: InputDecoration(
-                  labelText: 'Contenedor',
-                  prefixIcon: Icon(
-                    Icons.local_shipping,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                validator: _validateContainer,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) {
-                  if (!_isSubmitting) {
-                    _validateAndSubmit();
-                  }
-                },
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _isSubmitting ? null : _validateAndSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child:
-                    _isSubmitting
-                        ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                        : const Text('Verificar'),
-              ),
-            ],
+            ),
           ),
         ),
       ),
