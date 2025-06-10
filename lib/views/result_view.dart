@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
+import 'package:vira/main.dart';
 
 class ResultView extends StatefulWidget {
   final bool isValid;

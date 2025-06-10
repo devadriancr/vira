@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/work_center.dart';
-import '../controllers/material_validation_controller.dart';
-import 'validation_history_view.dart';
-import 'validation_statistics_view.dart';
-import 'result_view.dart'; // Importar la nueva vista
+import 'package:vira/controllers/material_validation_controller.dart';
+import 'package:vira/views/validation_history_view.dart';
+import 'package:vira/views/validation_statistics_view.dart';
+import 'package:vira/views/result_view.dart';
 
 class MaterialValidationView extends StatefulWidget {
-  final WorkCenter workCenter;
-
-  const MaterialValidationView({super.key, required this.workCenter});
+  const MaterialValidationView({super.key});
 
   @override
   State<MaterialValidationView> createState() => _MaterialValidationViewState();
@@ -59,52 +56,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     FocusScope.of(context).requestFocus(_finalLabelFocus);
   }
 
-  void _showOptionsMenu() {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('Historial de Validaciones'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ValidationHistoryView(
-                            workCenter: widget.workCenter,
-                          ),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.bar_chart),
-                title: const Text('Estadísticas'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ValidationStatisticsView(
-                            workCenter: widget.workCenter,
-                          ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _validateAndSubmit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       setState(() {
@@ -133,7 +84,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               visualAidCode: visualAidCode,
               finalLabelCode: finalLabelCode,
               isValid: isValid,
-              workCenterId: widget.workCenter.id,
               partNumber: partNumber,
             );
 
@@ -210,7 +160,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.workCenter.name),
+        title: Text('Validación de Materiales'),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
@@ -219,20 +169,14 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => ValidationHistoryView(
-                          workCenter: widget.workCenter,
-                        ),
+                    builder: (context) => ValidationHistoryView(),
                   ),
                 );
               } else if (value == 'statistics') {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder:
-                        (context) => ValidationStatisticsView(
-                          workCenter: widget.workCenter,
-                        ),
+                    builder: (context) => ValidationStatisticsView(),
                   ),
                 );
               }

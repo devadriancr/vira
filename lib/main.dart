@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'views/splash_view.dart';
 import 'views/login_view.dart';
-import 'views/work_centers_view.dart';
+import 'views/material_validation_view.dart';
 
 void main() {
   runApp(const ViraApp());
@@ -69,17 +69,12 @@ class AppRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
-        // Si está cargando inicialmente o cerrando sesión, mostrar splash
         if (authService.isLoading || authService.isLoggingOut) {
           return const SplashView();
         }
-
-        // Si está autenticado, mostrar centros de trabajo
         if (authService.isAuthenticated) {
-          return const WorkCentersView();
+          return const MaterialValidationView();
         }
-
-        // Si no está autenticado, mostrar login
         return const LoginView();
       },
     );

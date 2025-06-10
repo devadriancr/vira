@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/work_center.dart';
-import '../controllers/material_validation_controller.dart';
+import 'package:vira/controllers/material_validation_controller.dart';
 
 class ValidationStatisticsView extends StatefulWidget {
-  final WorkCenter workCenter;
-
-  const ValidationStatisticsView({super.key, required this.workCenter});
+  const ValidationStatisticsView({super.key}); // Eliminar parámetro workCenter
 
   @override
   State<ValidationStatisticsView> createState() =>
@@ -29,9 +26,7 @@ class _ValidationStatisticsViewState extends State<ValidationStatisticsView> {
 
     try {
       final statistics =
-          await MaterialValidationController.getValidationStatistics(
-            workCenterId: widget.workCenter.id,
-          );
+          await MaterialValidationController.getValidationStatistics();
 
       setState(() {
         _statistics = statistics;
@@ -187,7 +182,7 @@ class _ValidationStatisticsViewState extends State<ValidationStatisticsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estadísticas'),
+        title: const Text('Estadísticas Generales'), // Título actualizado
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -276,7 +271,8 @@ class _ValidationStatisticsViewState extends State<ValidationStatisticsView> {
                         _statistics!['success_rate'].toDouble(),
                       ),
                       const SizedBox(height: 24),
-                      // Información adicional
+                      // Información adicional - Eliminada la sección de centro de trabajo
+                      // Podemos agregar información alternativa si es necesario
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -284,7 +280,7 @@ class _ValidationStatisticsViewState extends State<ValidationStatisticsView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Centro de Trabajo',
+                                'Resumen de Actividad',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -293,13 +289,9 @@ class _ValidationStatisticsViewState extends State<ValidationStatisticsView> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                widget.workCenter.name,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              Text(
-                                'Número: ${widget.workCenter.number}',
+                                'Estadísticas globales de todas las validaciones',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 14,
                                   color: Colors.grey[600],
                                 ),
                               ),

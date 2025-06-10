@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/work_center.dart';
-import '../controllers/material_validation_controller.dart';
+import 'package:vira/controllers/material_validation_controller.dart';
 
 class ValidationHistoryView extends StatefulWidget {
-  final WorkCenter workCenter;
-
-  const ValidationHistoryView({super.key, required this.workCenter});
+  const ValidationHistoryView({super.key}); // Eliminar workCenter
 
   @override
   State<ValidationHistoryView> createState() => _ValidationHistoryViewState();
@@ -31,7 +28,6 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView> {
     try {
       final validations =
           await MaterialValidationController.getValidationHistory(
-            workCenterId: widget.workCenter.id,
             status: _selectedStatus == 'Todos' ? null : _selectedStatus,
           );
 
@@ -76,9 +72,14 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView> {
                 ),
               ),
               items:
-                  _statusOptions.map((status) {
-                    return DropdownMenuItem(value: status, child: Text(status));
-                  }).toList(),
+                  _statusOptions
+                      .map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) {
                 setState(() {
                   _selectedStatus = value == 'Todos' ? null : value;
@@ -96,6 +97,9 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView> {
     final status = validation['validation_status'] as String;
     final isOK = status == 'OK';
     final createdAt = DateTime.parse(validation['created_at']);
+    final containerCode = validation['container_code'] ?? 'N/A';
+    final visualAidCode = validation['visual_aid_code'] ?? 'N/A';
+    final finalLabelCode = validation['final_label_code'] ?? 'N/A';
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -105,15 +109,15 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView> {
           child: Icon(isOK ? Icons.check : Icons.close, color: Colors.white),
         ),
         title: Text(
-          'Estación: ${validation['work_center']['name']}',
+          'Resultado: $status',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Etiqueta Fila: ${validation['final_label_code']}'),
-            Text('Ayuda Visual: ${validation['visual_aid_code']}'),
-            Text('Contenedor: ${validation['visual_aid_code']}'),
+            Text('Etiqueta Final: $finalLabelCode'),
+            Text('Ayuda Visual: $visualAidCode'),
+            Text('Contenedor: $containerCode'),
             Text(
               '${createdAt.day}/${createdAt.month}/${createdAt.year} ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),

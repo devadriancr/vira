@@ -166,7 +166,6 @@ class MaterialValidationController {
     required String visualAidCode,
     required String finalLabelCode,
     required bool isValid,
-    required int workCenterId,
     required String? partNumber,
   }) async {
     try {
@@ -183,7 +182,6 @@ class MaterialValidationController {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'work_center_id': workCenterId,
           'container_code': containerCode,
           'visual_aid_code': visualAidCode,
           'final_label_code': finalLabelCode,
