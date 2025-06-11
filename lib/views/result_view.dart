@@ -5,11 +5,17 @@ import 'package:vira/main.dart';
 class ResultView extends StatefulWidget {
   final bool isValid;
   final bool hasConnectionError;
+  final String?
+  errorMessage; // Nuevo parámetro para el mensaje de error de la API
+  final List<String>?
+  apiErrors; // Nuevo parámetro para errores específicos de la API
 
   const ResultView({
     super.key,
     required this.isValid,
     this.hasConnectionError = false,
+    this.errorMessage,
+    this.apiErrors,
   });
 
   @override
@@ -163,19 +169,30 @@ class _ResultViewState extends State<ResultView> {
     Color backgroundColor;
     String displayText;
     bool showBackButton = true;
+    String? subtitleText;
 
     if (widget.hasConnectionError) {
       backgroundColor =
           customColors?.connectionErrorColor ?? const Color(0xFFFF8F00);
       displayText = 'ERROR DE CONEXIÓN';
       showBackButton = true;
+
+      // Mostrar el mensaje de error específico si está disponible
+      if (widget.errorMessage != null) {
+        subtitleText = widget.errorMessage;
+      } else if (widget.apiErrors != null && widget.apiErrors!.isNotEmpty) {
+        subtitleText = widget.apiErrors!.join('\n');
+      } else {
+        subtitleText =
+            'No se pudo conectar al servidor.\nVerifique su conexión a internet.';
+      }
     } else {
       backgroundColor =
           widget.isValid
-              ? (customColors?.okColor ?? const Color(0xFF1D24CA))
+              ? theme.colorScheme.primary
               : (customColors?.ngColor ?? const Color(0xFFFF0000));
       displayText = widget.isValid ? 'OK' : 'NG';
-      showBackButton = widget.isValid; // Solo mostrar botón si es OK
+      showBackButton = widget.isValid;
     }
 
     return WillPopScope(
@@ -222,14 +239,17 @@ class _ResultViewState extends State<ResultView> {
                             ),
                           ),
                           const SizedBox(height: 15),
-                          Text(
-                            'No se pudo conectar al servidor.\nVerifique su conexión a internet.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w300,
-                              height: 1.4,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Text(
+                              subtitleText ?? 'Error desconocido',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w300,
+                                height: 1.4,
+                              ),
                             ),
                           ),
                         ],
@@ -262,19 +282,12 @@ class _ResultViewState extends State<ResultView> {
                     backgroundColor: Colors.white.withOpacity(0.95),
                     foregroundColor: backgroundColor,
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
                     elevation: 8,
                   ),
                   icon: Icon(Icons.arrow_back_rounded, size: 24),
                   label: Text(
                     'REGRESAR',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
+                    style: TextStyle(fontSize: 16, letterSpacing: 1.0),
                   ),
                 ),
               ),

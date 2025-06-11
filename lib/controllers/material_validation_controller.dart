@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -174,6 +177,30 @@ class MaterialValidationController {
         throw Exception('No hay token de autenticación');
       }
 
+      // Obtener información del dispositivo
+      final deviceInfo = DeviceInfoPlugin();
+      String deviceModel = 'Desconocido';
+      String deviceName = 'Desconocido';
+      String deviceId = 'Desconocido';
+
+      if (Platform.isAndroid) {
+        AndroidDeviceInfo android = await deviceInfo.androidInfo;
+        deviceId = android.id;
+        deviceModel = android.model;
+        deviceName = android.device;
+      } else if (Platform.isIOS) {
+        IosDeviceInfo ios = await deviceInfo.iosInfo;
+        deviceId = ios.identifierForVendor ?? 'Desconocido';
+        deviceModel = ios.model;
+        deviceName = ios.name;
+      }
+
+      // Obtener dirección IP
+      final networkInfo = NetworkInfo();
+      String? ipAddress = await networkInfo.getWifiIP();
+      String? macAddress = await networkInfo.getWifiBSSID();
+
+      // Resto del código...
       final response = await http.post(
         Uri.parse('$_baseUrl/material-validations'),
         headers: {
@@ -187,6 +214,11 @@ class MaterialValidationController {
           'final_label_code': finalLabelCode,
           'validation_status': isValid ? 'OK' : 'NG',
           'part_number': partNumber,
+          'device_model': deviceModel,
+          'device_name': deviceName,
+          'device_id': deviceId,
+          'ip_address': ipAddress,
+          'mac_address': macAddress,
         }),
       );
 
@@ -230,7 +262,7 @@ class MaterialValidationController {
       }
 
       if (status != null) {
-        queryParams['status'] = status;
+        queryParams['validation_status'] = status;
       }
 
       final uri = Uri.parse(
@@ -255,47 +287,6 @@ class MaterialValidationController {
       }
     } catch (e) {
       print('Error obteniendo historial: $e');
-      rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>> getValidationStatistics({
-    int? workCenterId,
-  }) async {
-    try {
-      final token = await _storage.read(key: 'auth_token');
-      if (token == null) {
-        throw Exception('No hay token de autenticación');
-      }
-
-      final queryParams = <String, String>{};
-
-      if (workCenterId != null) {
-        queryParams['work_center_id'] = workCenterId.toString();
-      }
-
-      final uri = Uri.parse(
-        '$_baseUrl/material-validations/statistics',
-      ).replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'];
-      } else {
-        throw Exception(
-          'Error al obtener estadísticas: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      print('Error obteniendo estadísticas: $e');
       rethrow;
     }
   }

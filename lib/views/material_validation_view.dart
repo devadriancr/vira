@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:vira/controllers/material_validation_controller.dart';
 import 'package:vira/views/validation_history_view.dart';
-import 'package:vira/views/validation_statistics_view.dart';
 import 'package:vira/views/result_view.dart';
+import 'package:vira/services/auth_service.dart';
 
 class MaterialValidationView extends StatefulWidget {
   const MaterialValidationView({super.key});
@@ -65,6 +66,31 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     });
   }
 
+  Future<void> _handleLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cerrar Sesión'),
+            content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Cerrar Sesión'),
+              ),
+            ],
+          ),
+    );
+
+    if (shouldLogout == true) {
+      await context.read<AuthService>().logout();
+    }
+  }
+
   Future<void> _validateAndSubmit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       setState(() {
@@ -99,8 +125,11 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             context,
             MaterialPageRoute(
               builder:
-                  (context) =>
-                      ResultView(isValid: isValid, hasConnectionError: false),
+                  (context) => ResultView(
+                    isValid: isValid,
+                    hasConnectionError: false,
+                    apiErrors: accessErrors,
+                  ),
             ),
           );
 
@@ -122,8 +151,11 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             context,
             MaterialPageRoute(
               builder:
-                  (context) =>
-                      ResultView(isValid: false, hasConnectionError: true),
+                  (context) => ResultView(
+                    isValid: false,
+                    hasConnectionError: true,
+                    errorMessage: e.toString(),
+                  ),
             ),
           );
 
@@ -169,44 +201,54 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
       appBar: AppBar(
         title: const Text('Validación de Materiales'),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (String value) {
-              if (value == 'history') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ValidationHistoryView(),
-                  ),
-                );
-              } else if (value == 'statistics') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ValidationStatisticsView(),
-                  ),
-                );
-              }
+          Consumer<AuthService>(
+            builder: (context, authService, child) {
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (String value) {
+                  if (value == 'history') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ValidationHistoryView(),
+                      ),
+                    );
+                  } else if (value == 'logout') {
+                    _handleLogout(context);
+                  }
+                },
+                itemBuilder:
+                    (BuildContext context) => <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'history',
+                        child: ListTile(
+                          leading: Icon(Icons.history),
+                          title: Text('Historial'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'logout',
+                        child: ListTile(
+                          leading:
+                              authService.isLoggingOut
+                                  ? SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  )
+                                  : const Icon(Icons.logout),
+                          title: const Text('Cerrar Sesión'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+              );
             },
-            itemBuilder:
-                (BuildContext context) => <PopupMenuEntry<String>>[
-                  const PopupMenuItem<String>(
-                    value: 'history',
-                    child: ListTile(
-                      leading: Icon(Icons.history),
-                      title: Text('Historial'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'statistics',
-                    child: ListTile(
-                      leading: Icon(Icons.bar_chart),
-                      title: Text('Estadísticas'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
           ),
         ],
       ),

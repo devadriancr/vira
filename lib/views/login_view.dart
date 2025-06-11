@@ -40,14 +40,12 @@ class _LoginViewState extends State<LoginView> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          // Permite desplazamiento
           padding: const EdgeInsets.all(24.0),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: screenHeight - MediaQuery.of(context).padding.vertical,
             ),
             child: IntrinsicHeight(
-              // Mantiene centrado verticalmente
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -55,10 +53,9 @@ class _LoginViewState extends State<LoginView> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Widgets ajustables según tamaño de pantalla
                     Icon(
                       Icons.precision_manufacturing,
-                      size: isSmallScreen ? 60 : 80, // Tamaño adaptable
+                      size: isSmallScreen ? 60 : 80,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     SizedBox(height: isSmallScreen ? 16 : 32),
@@ -69,15 +66,24 @@ class _LoginViewState extends State<LoginView> {
                         context,
                       ).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: isSmallScreen ? 22 : null, // Fuente adaptable
+                        fontSize: isSmallScreen ? 22 : null,
                       ),
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 48),
                     TextFormField(
                       controller: _emailController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Correo electrónico',
-                        prefixIcon: Icon(Icons.email_outlined),
+                        prefixIcon: Icon(
+                          Icons.email_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        border:
+                            const OutlineInputBorder(), // Borde tipo outline
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14, // Mismo padding vertical
+                        ),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -95,18 +101,31 @@ class _LoginViewState extends State<LoginView> {
                       controller: _passwordController,
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        prefixIcon: Icon(
+                          Icons.lock_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility
                                 : Icons.visibility_off,
+                            color:
+                                Theme.of(
+                                  context,
+                                ).colorScheme.primary, // Color primario
                           ),
                           onPressed: () {
                             setState(() {
                               _obscurePassword = !_obscurePassword;
                             });
                           },
+                        ),
+                        border:
+                            const OutlineInputBorder(), // Borde tipo outline
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14, // Mismo padding vertical
                         ),
                       ),
                       obscureText: _obscurePassword,
@@ -126,6 +145,19 @@ class _LoginViewState extends State<LoginView> {
                             ElevatedButton(
                               onPressed:
                                   authService.isLoading ? null : _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                    12,
+                                  ), // Bordes redondeados
+                                ),
+                              ),
                               child:
                                   authService.isLoading
                                       ? const SizedBox(
@@ -133,6 +165,8 @@ class _LoginViewState extends State<LoginView> {
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
+                                          color:
+                                              Colors.white, // Indicador blanco
                                         ),
                                       )
                                       : const Text('Iniciar Sesión'),
@@ -158,10 +192,7 @@ class _LoginViewState extends State<LoginView> {
                                         authService.error!,
                                         style: TextStyle(
                                           color: Colors.red[600],
-                                          fontSize:
-                                              isSmallScreen
-                                                  ? 12
-                                                  : 14, // Tamaño adaptable
+                                          fontSize: isSmallScreen ? 12 : 14,
                                         ),
                                       ),
                                     ),
@@ -178,7 +209,6 @@ class _LoginViewState extends State<LoginView> {
                         );
                       },
                     ),
-                    // Espacio flexible para mantener centrado
                     if (!isSmallScreen) const Spacer(),
                   ],
                 ),
