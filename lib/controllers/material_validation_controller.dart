@@ -4,6 +4,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MaterialValidationController {
   static const String _baseUrl = 'http://10.1.50.253:8000/api';
@@ -195,12 +197,31 @@ class MaterialValidationController {
         deviceName = ios.name;
       }
 
-      // Obtener dirección IP
+      // ⛔ Solicitar permiso de ubicación
+      final locationPermission = await Permission.location.request();
+      if (!locationPermission.isGranted) {
+        print(
+          "⚠️ Permiso de ubicación no concedido. No se podrá obtener la MAC del router.",
+        );
+      }
+
+      // ⛔ Verificar si la ubicación del dispositivo está activada (necesario para obtener BSSID)
+      bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isLocationEnabled) {
+        print(
+          "⚠️ La ubicación del dispositivo está desactivada. No se podrá obtener la MAC del router.",
+        );
+      }
+
+      // ✅ Obtener IP y MAC (BSSID del router Wi-Fi)
       final networkInfo = NetworkInfo();
       String? ipAddress = await networkInfo.getWifiIP();
-      String? macAddress = await networkInfo.getWifiBSSID();
+      String? macAddress =
+          (locationPermission.isGranted && isLocationEnabled)
+              ? await networkInfo.getWifiBSSID()
+              : null;
 
-      // Resto del código...
+      // 🌐 Enviar datos al backend
       final response = await http.post(
         Uri.parse('$_baseUrl/material-validations'),
         headers: {
@@ -224,7 +245,7 @@ class MaterialValidationController {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        print('Validación enviada exitosamente: ${data['message']}');
+        print('✅ Validación enviada exitosamente: ${data['message']}');
         if (data['access_errors'] != null) {
           return List<String>.from(data['access_errors']);
         }
@@ -237,7 +258,7 @@ class MaterialValidationController {
         throw Exception('Error del servidor: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error enviando validación a la API: $e');
+      print('❌ Error enviando validación a la API: $e');
       rethrow;
     }
 
