@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
+import 'services/connectivity_service.dart';
 import 'views/splash_view.dart';
 import 'views/login_view.dart';
 import 'views/material_validation_view.dart';
+import 'views/connectivity_view.dart';
 
 void main() {
   runApp(const ViraApp());
@@ -14,15 +16,17 @@ class ViraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AuthService(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ConnectivityService()),
+        ChangeNotifierProvider(create: (context) => AuthService()),
+      ],
       child: MaterialApp(
         title: 'Vira',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1D24CA),
             brightness: Brightness.light,
-            // primary: const Color(0xFF0000FF),
             primary: const Color(0xFF1D24CA),
             secondary: const Color(0xFF646FD4),
             tertiary: const Color(0xFF9BA3EB),
@@ -44,7 +48,6 @@ class ViraApp extends StatelessWidget {
               vertical: 16,
             ),
           ),
-          // Colores personalizados para la aplicación
           extensions: <ThemeExtension<dynamic>>[
             CustomColors(
               okColor: const Color(0xFF0065F8),
@@ -53,10 +56,19 @@ class ViraApp extends StatelessWidget {
             ),
           ],
         ),
-        home: const AppRouter(),
+        home: const ConnectivityWrapper(),
         debugShowCheckedModeBanner: false,
       ),
     );
+  }
+}
+
+class ConnectivityWrapper extends StatelessWidget {
+  const ConnectivityWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConnectivityView(child: const AppRouter());
   }
 }
 
@@ -118,13 +130,12 @@ class CustomColors extends ThemeExtension<CustomColors> {
     );
   }
 
-  // Método estático para acceder fácilmente a los colores desde el contexto
   static CustomColors of(BuildContext context) {
     return Theme.of(context).extension<CustomColors>() ??
         const CustomColors(
-          okColor: Color(0xFF1D24CA), // Azul por defecto
-          ngColor: Color(0xFFFF0000), // Rojo por defecto
-          connectionErrorColor: Color(0xFFFF8F00), // Naranja por defecto
+          okColor: Color(0xFF1D24CA),
+          ngColor: Color(0xFFFF0000),
+          connectionErrorColor: Color(0xFFFF8F00),
         );
   }
 
