@@ -1,6 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 
 class MaterialValidationController {
   static const String _baseUrl = 'http://10.1.50.253:8000/api';
@@ -166,7 +171,6 @@ class MaterialValidationController {
     required String visualAidCode,
     required String finalLabelCode,
     required bool isValid,
-    required int workCenterId,
     required String? partNumber,
   }) async {
     try {
@@ -175,6 +179,49 @@ class MaterialValidationController {
         throw Exception('No hay token de autenticación');
       }
 
+      // Obtener información del dispositivo
+      final deviceInfo = DeviceInfoPlugin();
+      String deviceModel = 'Desconocido';
+      String deviceName = 'Desconocido';
+      String deviceId = 'Desconocido';
+
+      if (Platform.isAndroid) {
+        AndroidDeviceInfo android = await deviceInfo.androidInfo;
+        deviceId = android.id;
+        deviceModel = android.model;
+        deviceName = android.device;
+      } else if (Platform.isIOS) {
+        IosDeviceInfo ios = await deviceInfo.iosInfo;
+        deviceId = ios.identifierForVendor ?? 'Desconocido';
+        deviceModel = ios.model;
+        deviceName = ios.name;
+      }
+
+      // ⛔ Solicitar permiso de ubicación
+      final locationPermission = await Permission.location.request();
+      if (!locationPermission.isGranted) {
+        print(
+          "⚠️ Permiso de ubicación no concedido. No se podrá obtener la MAC del router.",
+        );
+      }
+
+      // ⛔ Verificar si la ubicación del dispositivo está activada (necesario para obtener BSSID)
+      bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isLocationEnabled) {
+        print(
+          "⚠️ La ubicación del dispositivo está desactivada. No se podrá obtener la MAC del router.",
+        );
+      }
+
+      // ✅ Obtener IP y MAC (BSSID del router Wi-Fi)
+      final networkInfo = NetworkInfo();
+      String? ipAddress = await networkInfo.getWifiIP();
+      String? macAddress =
+          (locationPermission.isGranted && isLocationEnabled)
+              ? await networkInfo.getWifiBSSID()
+              : null;
+
+      // 🌐 Enviar datos al backend
       final response = await http.post(
         Uri.parse('$_baseUrl/material-validations'),
         headers: {
@@ -183,18 +230,22 @@ class MaterialValidationController {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'work_center_id': workCenterId,
           'container_code': containerCode,
           'visual_aid_code': visualAidCode,
           'final_label_code': finalLabelCode,
           'validation_status': isValid ? 'OK' : 'NG',
           'part_number': partNumber,
+          'device_model': deviceModel,
+          'device_name': deviceName,
+          'device_id': deviceId,
+          'ip_address': ipAddress,
+          'mac_address': macAddress,
         }),
       );
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        print('Validación enviada exitosamente: ${data['message']}');
+        print('✅ Validación enviada exitosamente: ${data['message']}');
         if (data['access_errors'] != null) {
           return List<String>.from(data['access_errors']);
         }
@@ -207,7 +258,7 @@ class MaterialValidationController {
         throw Exception('Error del servidor: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error enviando validación a la API: $e');
+      print('❌ Error enviando validación a la API: $e');
       rethrow;
     }
 
@@ -232,7 +283,7 @@ class MaterialValidationController {
       }
 
       if (status != null) {
-        queryParams['status'] = status;
+        queryParams['validation_status'] = status;
       }
 
       final uri = Uri.parse(
@@ -257,47 +308,6 @@ class MaterialValidationController {
       }
     } catch (e) {
       print('Error obteniendo historial: $e');
-      rethrow;
-    }
-  }
-
-  static Future<Map<String, dynamic>> getValidationStatistics({
-    int? workCenterId,
-  }) async {
-    try {
-      final token = await _storage.read(key: 'auth_token');
-      if (token == null) {
-        throw Exception('No hay token de autenticación');
-      }
-
-      final queryParams = <String, String>{};
-
-      if (workCenterId != null) {
-        queryParams['work_center_id'] = workCenterId.toString();
-      }
-
-      final uri = Uri.parse(
-        '$_baseUrl/material-validations/statistics',
-      ).replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'];
-      } else {
-        throw Exception(
-          'Error al obtener estadísticas: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      print('Error obteniendo estadísticas: $e');
       rethrow;
     }
   }
