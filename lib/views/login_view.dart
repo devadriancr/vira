@@ -11,13 +11,13 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _loginController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _loginController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -26,7 +26,7 @@ class _LoginViewState extends State<LoginView> {
     if (_formKey.currentState!.validate()) {
       final authService = context.read<AuthService>();
       await authService.login(
-        _emailController.text.trim(),
+        _loginController.text.trim(),
         _passwordController.text,
       );
     }
@@ -35,17 +35,15 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenHeight < 600; // Dispositivos pequeños
+    final isSmallScreen = screenHeight < 600;
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: screenHeight - MediaQuery.of(context).padding.vertical,
-            ),
-            child: IntrinsicHeight(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Container(
+              constraints: BoxConstraints(maxWidth: 400),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -60,7 +58,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     SizedBox(height: isSmallScreen ? 16 : 32),
                     Text(
-                      'Bienvenido a Vira',
+                      'Escaneo de Tres Puntos',
                       textAlign: TextAlign.center,
                       style: Theme.of(
                         context,
@@ -71,27 +69,23 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 48),
                     TextFormField(
-                      controller: _emailController,
+                      controller: _loginController, // Controller renombrado
                       decoration: InputDecoration(
-                        labelText: 'Correo electrónico',
+                        labelText: 'Usuario o Correo Electrónico',
                         prefixIcon: Icon(
-                          Icons.email_outlined,
+                          Icons.person_outline,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                        border:
-                            const OutlineInputBorder(), // Borde tipo outline
+                        border: const OutlineInputBorder(),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 14, // Mismo padding vertical
+                          vertical: 14,
                         ),
                       ),
-                      keyboardType: TextInputType.emailAddress,
+                      keyboardType: TextInputType.text,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Por favor ingresa tu correo';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Ingresa un correo válido';
+                          return 'Por favor ingresa tu usuario o correo electrónico';
                         }
                         return null;
                       },
@@ -110,10 +104,7 @@ class _LoginViewState extends State<LoginView> {
                             _obscurePassword
                                 ? Icons.visibility
                                 : Icons.visibility_off,
-                            color:
-                                Theme.of(
-                                  context,
-                                ).colorScheme.primary, // Color primario
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: () {
                             setState(() {
@@ -121,11 +112,10 @@ class _LoginViewState extends State<LoginView> {
                             });
                           },
                         ),
-                        border:
-                            const OutlineInputBorder(), // Borde tipo outline
+                        border: const OutlineInputBorder(),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 14, // Mismo padding vertical
+                          vertical: 14,
                         ),
                       ),
                       obscureText: _obscurePassword,
@@ -153,9 +143,7 @@ class _LoginViewState extends State<LoginView> {
                                   vertical: 14,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    12,
-                                  ), // Bordes redondeados
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child:
@@ -165,8 +153,7 @@ class _LoginViewState extends State<LoginView> {
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color:
-                                              Colors.white, // Indicador blanco
+                                          color: Colors.white,
                                         ),
                                       )
                                       : const Text('Iniciar Sesión'),
@@ -209,7 +196,6 @@ class _LoginViewState extends State<LoginView> {
                         );
                       },
                     ),
-                    if (!isSmallScreen) const Spacer(),
                   ],
                 ),
               ),

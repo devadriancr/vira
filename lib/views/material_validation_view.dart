@@ -23,17 +23,15 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   final FocusNode _containerFocus = FocusNode();
 
   bool _isSubmitting = false;
+  bool _firstBuild = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            _finalLabelFocus.requestFocus();
-          }
-        });
+      if (mounted && _firstBuild) {
+        _finalLabelFocus.requestFocus();
+        _firstBuild = false;
       }
     });
   }
@@ -253,102 +251,117 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          // Permite desplazamiento
-          padding: EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: isSmallScreen ? 8 : 24, // Padding vertical adaptable
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: screenHeight - MediaQuery.of(context).padding.vertical,
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!isSmallScreen) const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _finalLabelController,
-                    focusNode: _finalLabelFocus,
-                    enabled: !_isSubmitting,
-                    decoration: InputDecoration(
-                      labelText: 'Etiqueta Final',
-                      prefixIcon: Icon(
-                        Icons.local_offer,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14, // Reducción vertical
-                      ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Campos del formulario
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      top: isSmallScreen ? 8 : 24,
+                      bottom: 16,
                     ),
-                    validator: _validateFinalLabel,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) {
-                      _fieldFocusChange(_finalLabelFocus, _visualAidFocus);
-                    },
-                  ),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                  TextFormField(
-                    controller: _visualAidController,
-                    focusNode: _visualAidFocus,
-                    enabled: !_isSubmitting,
-                    decoration: InputDecoration(
-                      labelText: 'Ayuda visual',
-                      prefixIcon: Icon(
-                        Icons.article,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
+                    child: Column(
+                      children: [
+                        TextFormField(
+                          controller: _finalLabelController,
+                          focusNode: _finalLabelFocus,
+                          enabled: !_isSubmitting,
+                          decoration: InputDecoration(
+                            labelText: 'Etiqueta Final',
+                            prefixIcon: Icon(
+                              Icons.local_offer,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          validator: _validateFinalLabel,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) {
+                            _fieldFocusChange(
+                              _finalLabelFocus,
+                              _visualAidFocus,
+                            );
+                          },
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        TextFormField(
+                          controller: _visualAidController,
+                          focusNode: _visualAidFocus,
+                          enabled: !_isSubmitting,
+                          decoration: InputDecoration(
+                            labelText: 'Ayuda visual',
+                            prefixIcon: Icon(
+                              Icons.article,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          validator: _validateVisualAid,
+                          textInputAction: TextInputAction.next,
+                          onFieldSubmitted: (_) {
+                            _fieldFocusChange(_visualAidFocus, _containerFocus);
+                          },
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        TextFormField(
+                          controller: _containerController,
+                          focusNode: _containerFocus,
+                          enabled: !_isSubmitting,
+                          decoration: InputDecoration(
+                            labelText: 'Contenedor',
+                            prefixIcon: Icon(
+                              Icons.local_shipping,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
+                          validator: _validateContainer,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) {
+                            if (!_isSubmitting) {
+                              _validateAndSubmit();
+                            }
+                          },
+                        ),
+                      ],
                     ),
-                    validator: _validateVisualAid,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) {
-                      _fieldFocusChange(_visualAidFocus, _containerFocus);
-                    },
                   ),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                  TextFormField(
-                    controller: _containerController,
-                    focusNode: _containerFocus,
-                    enabled: !_isSubmitting,
-                    decoration: InputDecoration(
-                      labelText: 'Contenedor',
-                      prefixIcon: Icon(
-                        Icons.local_shipping,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                    ),
-                    validator: _validateContainer,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) {
-                      if (!_isSubmitting) {
-                        _validateAndSubmit();
-                      }
-                    },
+                ),
+
+                // Botón fijo en la parte inferior
+                Container(
+                  padding: EdgeInsets.only(
+                    bottom:
+                        MediaQuery.of(context).viewInsets.bottom > 0
+                            ? 16 // Mantenemos un padding mínimo cuando el teclado está visible
+                            : 24, // Más espacio cuando no hay teclado
+                    top: 16,
+                    left: 8,
+                    right: 8,
                   ),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  ElevatedButton(
+                  width: double.infinity,
+                  child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _validateAndSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                      ), // Reducción vertical
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -356,8 +369,8 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                     child:
                         _isSubmitting
                             ? const SizedBox(
-                              height: 20,
-                              width: 20,
+                              height: 24,
+                              width: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -365,13 +378,13 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                                 ),
                               ),
                             )
-                            : const Text('Verificar'),
+                            : const Text(
+                              'Verificar',
+                              style: TextStyle(fontSize: 16),
+                            ),
                   ),
-                  // Espacio adicional en dispositivos pequeños
-                  if (isSmallScreen)
-                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

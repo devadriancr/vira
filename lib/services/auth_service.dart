@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import '../models/models.dart';
+import 'package:vira/models/models.dart';
 
 class AuthService extends ChangeNotifier {
   static const String _baseUrl = 'http://10.1.50.253:8000/api';
@@ -10,17 +10,15 @@ class AuthService extends ChangeNotifier {
 
   User? _user;
   String? _token;
-  List<WorkCenter> _workCenters = [];
   bool _isLoading = true;
-  bool _isLoggingOut = false; // Nuevo estado para logout
+  bool _isLoggingOut = false;
   String? _error;
 
   User? get user => _user;
   String? get token => _token;
-  List<WorkCenter> get workCenters => _workCenters;
   bool get isAuthenticated => _user != null && _token != null;
   bool get isLoading => _isLoading;
-  bool get isLoggingOut => _isLoggingOut; // Getter para el estado de logout
+  bool get isLoggingOut => _isLoggingOut;
   String? get error => _error;
 
   AuthService() {
@@ -42,7 +40,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String login, String password) async {
     try {
       _error = null;
       _isLoading = true;
@@ -54,15 +52,19 @@ class AuthService extends ChangeNotifier {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'login': login, 'password': password}),
       );
 
       if (response.statusCode == 200) {
-        final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
+        final responseData = jsonDecode(response.body);
 
-        _user = authResponse.user;
-        _token = authResponse.token;
-        _workCenters = authResponse.workCenters;
+        _token = responseData['token'];
+
+        // Crear el usuario con los work_centers incluidos en la respuesta
+        _user = User.fromJson({
+          ...responseData['user'],
+          'work_centers': responseData['work_centers'] ?? [],
+        });
 
         await _storage.write(key: 'auth_token', value: _token);
 
@@ -87,7 +89,7 @@ class AuthService extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/work-centers'),
+        Uri.parse('$_baseUrl/user'), // Cambio de endpoint
         headers: {
           'Authorization': 'Bearer $_token',
           'Accept': 'application/json',
@@ -95,17 +97,15 @@ class AuthService extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        _user = User.fromJson(data['user']);
-        _workCenters =
-            (data['work_centers'] as List)
-                .map((item) => WorkCenter.fromJson(item))
-                .toList();
+        final userData = jsonDecode(response.body);
+        _user = User.fromJson(userData);
       } else if (response.statusCode == 401) {
         await logout();
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
+      // Si hay error cargando datos del usuario, hacer logout
+      await logout();
     }
   }
 
@@ -133,7 +133,6 @@ class AuthService extends ChangeNotifier {
       // Limpiar todos los datos
       _user = null;
       _token = null;
-      _workCenters = [];
       _error = null;
       _isLoggingOut = false;
       await _storage.delete(key: 'auth_token');

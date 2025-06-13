@@ -343,7 +343,18 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView>
   Widget _buildValidationCard(Map<String, dynamic> validation, int index) {
     final status = validation['validation_status'] as String;
     final isOK = status == 'OK';
-    final createdAt = DateTime.parse(validation['created_at']);
+    final createdAtString = validation['created_at'] as String;
+
+    // Corrección para el problema de hora
+    DateTime createdAt;
+    try {
+      // Intenta parsear la fecha con zona horaria
+      createdAt = DateTime.parse(createdAtString).toLocal();
+    } catch (e) {
+      // Si falla, usa la fecha actual como respaldo
+      createdAt = DateTime.now();
+    }
+
     final labelCode = validation['final_label_code'] ?? 'N/A';
     final containerCode = validation['container_code'] ?? 'N/A';
     final visualAidCode = validation['visual_aid_code'] ?? 'N/A';
@@ -560,11 +571,15 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView>
     );
   }
 
+  // Corrección para mostrar correctamente la hora
   String _formatDateTime(DateTime dateTime) {
+    // Asegurarse de usar la hora local
+    final localTime = dateTime.toLocal();
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final date = DateTime(localTime.year, localTime.month, localTime.day);
 
     String dayText;
     if (date == today) {
@@ -573,11 +588,16 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView>
       dayText = 'Ayer';
     } else {
       final weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-      dayText = weekdays[dateTime.weekday - 1];
+      dayText = weekdays[date.weekday - 1];
     }
 
-    final time =
-        '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    // Formatear la hora correctamente
+    final hour = localTime.hour;
+    final minute = localTime.minute;
+    final ampm = hour >= 12 ? 'PM' : 'AM';
+    final hour12 = hour % 12 == 0 ? 12 : hour % 12;
+
+    final time = '$hour12:${minute.toString().padLeft(2, '0')} $ampm';
     return '$dayText • $time';
   }
 
@@ -587,7 +607,7 @@ class _ValidationHistoryViewState extends State<ValidationHistoryView>
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text(
-          'Validaciones',
+          'Historial de Validaciones',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
