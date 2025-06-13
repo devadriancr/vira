@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vira/controllers/material_validation_controller.dart';
 import 'package:vira/views/validation_history_view.dart';
+import 'package:vira/views/profile_view.dart'; // Importar la nueva vista
 import 'package:vira/views/result_view.dart';
 import 'package:vira/services/auth_service.dart';
 
@@ -204,7 +205,14 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (String value) {
-                  if (value == 'history') {
+                  if (value == 'profile') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProfileView(),
+                      ),
+                    );
+                  } else if (value == 'history') {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -217,6 +225,14 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 },
                 itemBuilder:
                     (BuildContext context) => <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'profile',
+                        child: ListTile(
+                          leading: Icon(Icons.person),
+                          title: Text('Perfil'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
                       const PopupMenuItem<String>(
                         value: 'history',
                         child: ListTile(
