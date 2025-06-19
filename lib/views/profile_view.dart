@@ -1,295 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vira/services/auth_service.dart';
+import 'package:vira/views/login_view.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Perfil'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Consumer<AuthService>(
-        builder: (context, authService, child) {
-          final user = authService.user;
-
-          if (user == null) {
-            return const Center(
-              child: Text('No se pudo cargar la información del usuario'),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Header con avatar y nombre
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24.0),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        user.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (user.nickname != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '@${user.nickname}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Información del usuario
-                _buildInfoCard(context, 'Información Personal', [
-                  _buildInfoRow(Icons.email, 'Correo Electrónico', user.email),
-                  if (user.nickname != null)
-                    _buildInfoRow(
-                      Icons.account_circle,
-                      'Usuario',
-                      user.nickname!,
-                    ),
-                  if (user.createdAt != null)
-                    _buildInfoRow(
-                      Icons.calendar_today,
-                      'Fecha de Registro',
-                      _formatDate(user.createdAt!),
-                    ),
-                ]),
-
-                const SizedBox(height: 16),
-
-                // Centros de trabajo
-                if (user.workCenters != null && user.workCenters!.isNotEmpty)
-                  _buildInfoCard(
-                    context,
-                    'Centros de Trabajo Asignados',
-                    user.workCenters!
-                        .map((workCenter) => _buildWorkCenterRow(workCenter))
-                        .toList(),
-                  ),
-
-                const SizedBox(height: 24),
-
-                // Botón de cerrar sesión
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        authService.isLoggingOut
-                            ? null
-                            : () => _showLogoutDialog(context),
-                    icon:
-                        authService.isLoggingOut
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                            : const Icon(Icons.logout),
-                    label: const Text('Cerrar Sesión'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[600],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(
-    BuildContext context,
-    String title,
-    List<Widget> children,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWorkCenterRow(workCenter) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Icon(
-            Icons.precision_manufacturing,
-            size: 20,
-            color: Colors.grey[600],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  workCenter.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (workCenter.line != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Línea: ${workCenter.line!.name}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-
-    return '${date.day} de ${months[date.month - 1]} de ${date.year}';
-  }
-
-  Future<void> _showLogoutDialog(BuildContext context) async {
+  Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder:
           (context) => AlertDialog(
             title: const Text('Cerrar Sesión'),
             content: const Text('¿Estás seguro que deseas cerrar sesión?'),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancelar'),
               ),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  foregroundColor: Colors.white,
-                ),
                 child: const Text('Cerrar Sesión'),
               ),
             ],
@@ -297,7 +27,278 @@ class ProfileView extends StatelessWidget {
     );
 
     if (shouldLogout == true && context.mounted) {
-      await context.read<AuthService>().logout();
+      final authService = context.read<AuthService>();
+      await authService.logout();
+
+      // Limpiar toda la pila de navegación y redirigir al login
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginView()),
+        (route) => false,
+      );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(title: const Text('Perfil')),
+      body: Consumer<AuthService>(
+        builder: (context, authService, child) {
+          final user = authService.user;
+
+          if (user == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.precision_manufacturing,
+                    size: 60,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se pudo cargar la información del usuario',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    children: [
+                      // Información del usuario - Card minimalista
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Nombre
+                            Text(
+                              user.name,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            // Email
+                            Text(
+                              user.email,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Estaciones de trabajo
+                      if (user.workCenters != null &&
+                          user.workCenters!.isNotEmpty) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Estaciones de Trabajo',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Grid de estaciones
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.0,
+                              ),
+                          itemCount: user.workCenters!.length,
+                          itemBuilder: (context, index) {
+                            return _buildStationCard(
+                              context,
+                              user.workCenters![index],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // Botón de cerrar sesión
+              Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed:
+                        authService.isLoggingOut
+                            ? null
+                            : () => _handleLogout(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[500],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child:
+                        authService.isLoggingOut
+                            ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Cerrando sesión...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            )
+                            : const Text(
+                              'Cerrar Sesión',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStationCard(BuildContext context, workCenter) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icono de la estación (mismo del splash)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.precision_manufacturing,
+              color: theme.colorScheme.primary,
+              size: 28,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Nombre de la estación
+          Text(
+            workCenter.name,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+
+          // Línea (si existe)
+          if (workCenter.line != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              workCenter.line!.name,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

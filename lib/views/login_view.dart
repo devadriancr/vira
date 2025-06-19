@@ -69,7 +69,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 48),
                     TextFormField(
-                      controller: _loginController, // Controller renombrado
+                      controller: _loginController,
                       decoration: InputDecoration(
                         labelText: 'Usuario o Correo Electrónico',
                         prefixIcon: Icon(

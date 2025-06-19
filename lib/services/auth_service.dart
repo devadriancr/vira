@@ -111,11 +111,9 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     try {
-      // Activar estado de logout
       _isLoggingOut = true;
       notifyListeners();
 
-      // Pequeña pausa para mostrar el splash
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (_token != null) {
@@ -130,7 +128,6 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error during logout: $e');
     } finally {
-      // Limpiar todos los datos
       _user = null;
       _token = null;
       _error = null;

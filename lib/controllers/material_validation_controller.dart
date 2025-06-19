@@ -20,7 +20,11 @@ class MaterialValidationController {
     if (containerCode.isEmpty ||
         visualAidCode.isEmpty ||
         finalLabelCode.isEmpty) {
-      return {'isValid': false, 'partNumber': null};
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment': 'Uno o más campos están vacíos',
+      };
     }
 
     // 2. Verificar formatos correctos (C- y V-)
@@ -30,7 +34,23 @@ class MaterialValidationController {
         visualAidCode.startsWith('V-') && visualAidCode.length > 2;
 
     if (!containerValid || !visualAidValid) {
-      return {'isValid': false, 'partNumber': null};
+      String comment = '';
+      if (!containerValid && !visualAidValid) {
+        comment =
+            'No se ingresaron correctamente el contenedor y la ayuda visual';
+      } else if (!containerValid) {
+        comment =
+            'No se ingresaron correctamente el contenedor, debe empezar con "C-"';
+      } else {
+        comment =
+            'No se ingresaron correctamente la ayuda visual, debe empezar con "V-"';
+      }
+
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment': comment,
+      };
     }
 
     // 3. Extraer códigos base
@@ -78,7 +98,12 @@ class MaterialValidationController {
   ) {
     // Verificar coincidencia exacta
     if (containerBase != visualAidBase) {
-      return {'isValid': false, 'partNumber': null};
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment':
+            'El número de parte del contenedor y ayuda visual no coinciden',
+      };
     }
 
     // Buscar el texto completo en la etiqueta final
@@ -86,6 +111,10 @@ class MaterialValidationController {
     return {
       'isValid': containsPart,
       'partNumber': containsPart ? containerBase : null,
+      'validationComment':
+          containsPart
+              ? null
+              : 'El número de parte "$containerBase" no se encuentra en la etiqueta final',
     };
   }
 
@@ -106,11 +135,20 @@ class MaterialValidationController {
         return {
           'isValid': containsPart,
           'partNumber': containsPart ? combination : null,
+          'validationComment':
+              containsPart
+                  ? null
+                  : 'El número de parte "$combination" no se encuentra en la etiqueta final',
         };
       }
     }
 
-    return {'isValid': false, 'partNumber': null};
+    return {
+      'isValid': false,
+      'partNumber': null,
+      'validationComment':
+          'El número de parte de la ayuda visual "$visualAidBase" no coincide con ninguna combinación del contenedor',
+    };
   }
 
   /// Caso original: Validación tradicional sin '/'
@@ -121,7 +159,12 @@ class MaterialValidationController {
   ) {
     // Verificar coincidencia de códigos base
     if (containerBase != visualAidBase) {
-      return {'isValid': false, 'partNumber': null};
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment':
+            'El número de parte del contenedor "$containerBase" y ayuda visual "$visualAidBase" no coinciden',
+      };
     }
 
     // Verificar que el código base esté en la etiqueta final
@@ -129,6 +172,10 @@ class MaterialValidationController {
     return {
       'isValid': containsPart,
       'partNumber': containsPart ? containerBase : null,
+      'validationComment':
+          containsPart
+              ? null
+              : 'El número de parte "$containerBase" no se encuentra en la etiqueta final',
     };
   }
 
@@ -172,6 +219,7 @@ class MaterialValidationController {
     required String finalLabelCode,
     required bool isValid,
     required String? partNumber,
+    required String? validationComment,
   }) async {
     try {
       final token = await _storage.read(key: 'auth_token');
@@ -197,31 +245,44 @@ class MaterialValidationController {
         deviceName = ios.name;
       }
 
-      // ⛔ Solicitar permiso de ubicación
-      final locationPermission = await Permission.location.request();
-      if (!locationPermission.isGranted) {
-        print(
-          "⚠️ Permiso de ubicación no concedido. No se podrá obtener la MAC del router.",
-        );
+      // ✅ Verificar permisos ya solicitados (no los pedimos aquí)
+      final locationPermission = await Permission.location.isGranted;
+      bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!locationPermission) {
+        print("⚠️ Permiso de ubicación no concedido previamente.");
       }
 
-      // ⛔ Verificar si la ubicación del dispositivo está activada (necesario para obtener BSSID)
-      bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
       if (!isLocationEnabled) {
-        print(
-          "⚠️ La ubicación del dispositivo está desactivada. No se podrá obtener la MAC del router.",
-        );
+        print("⚠️ La ubicación del dispositivo está desactivada.");
       }
 
       // ✅ Obtener IP y MAC (BSSID del router Wi-Fi)
       final networkInfo = NetworkInfo();
       String? ipAddress = await networkInfo.getWifiIP();
       String? macAddress =
-          (locationPermission.isGranted && isLocationEnabled)
+          (locationPermission && isLocationEnabled)
               ? await networkInfo.getWifiBSSID()
               : null;
 
       // 🌐 Enviar datos al backend
+      final body = {
+        'container_code': containerCode,
+        'visual_aid_code': visualAidCode,
+        'final_label_code': finalLabelCode,
+        'validation_status': isValid ? 'OK' : 'NG',
+        'part_number': partNumber,
+        'device_model': deviceModel,
+        'device_name': deviceName,
+        'device_id': deviceId,
+        'ip_address': ipAddress,
+        'mac_address': macAddress?.toUpperCase(),
+      };
+
+      if (validationComment != null) {
+        body['validation_comment'] = validationComment;
+      }
+
       final response = await http.post(
         Uri.parse('$_baseUrl/material-validations'),
         headers: {
@@ -229,18 +290,7 @@ class MaterialValidationController {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'container_code': containerCode,
-          'visual_aid_code': visualAidCode,
-          'final_label_code': finalLabelCode,
-          'validation_status': isValid ? 'OK' : 'NG',
-          'part_number': partNumber,
-          'device_model': deviceModel,
-          'device_name': deviceName,
-          'device_id': deviceId,
-          'ip_address': ipAddress,
-          'mac_address': macAddress,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode == 201) {

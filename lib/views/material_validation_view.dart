@@ -109,6 +109,8 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
 
         final isValid = validationResult['isValid'] as bool;
         final partNumber = validationResult['partNumber'] as String?;
+        final validationComment =
+            validationResult['validationComment'] as String?;
 
         final accessErrors =
             await MaterialValidationController.sendValidationToAPI(
@@ -117,6 +119,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
               finalLabelCode: finalLabelCode,
               isValid: isValid,
               partNumber: partNumber,
+              validationComment: validationComment,
             );
 
         if (mounted) {
@@ -132,15 +135,15 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             ),
           );
 
-          if (accessErrors != null && accessErrors.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(accessErrors.join('\n')),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
+          // if (accessErrors != null && accessErrors.isNotEmpty) {
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     SnackBar(
+          //       content: Text(accessErrors.join('\n')),
+          //       backgroundColor: Colors.orange,
+          //       duration: const Duration(seconds: 2),
+          //     ),
+          //   );
+          // }
 
           _resetForm();
         }
@@ -225,14 +228,14 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 },
                 itemBuilder:
                     (BuildContext context) => <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
-                        value: 'profile',
-                        child: ListTile(
-                          leading: Icon(Icons.person),
-                          title: Text('Perfil'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
+                      // const PopupMenuItem<String>(
+                      //   value: 'profile',
+                      //   child: ListTile(
+                      //     leading: Icon(Icons.person),
+                      //     title: Text('Perfil'),
+                      //     contentPadding: EdgeInsets.zero,
+                      //   ),
+                      // ),
                       const PopupMenuItem<String>(
                         value: 'history',
                         child: ListTile(
