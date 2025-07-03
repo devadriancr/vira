@@ -8,7 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
 
 class MaterialValidationController {
-  static const String _baseUrl = 'http://10.1.50.253:8000/api';
+  static const String _baseUrl = 'http://192.168.130.50:9080/api';
   static const _storage = FlutterSecureStorage();
 
   static Future<Map<String, dynamic>> validate(
@@ -53,11 +53,33 @@ class MaterialValidationController {
       };
     }
 
-    // 3. Extraer códigos base
+    // 3. Verificar que finalLabelCode NO inicie con C- o V-
+    final finalLabelStartsWithC = finalLabelCode.startsWith('C-');
+    final finalLabelStartsWithV = finalLabelCode.startsWith('V-');
+
+    if (finalLabelStartsWithC || finalLabelStartsWithV) {
+      String comment = '';
+      if (finalLabelStartsWithC && finalLabelStartsWithV) {
+        // Esto técnicamente no puede pasar, pero por completitud
+        comment = 'La etiqueta final no debe empezar con "C-" o "V-"';
+      } else if (finalLabelStartsWithC) {
+        comment = 'La etiqueta final no debe empezar con "C-"';
+      } else {
+        comment = 'La etiqueta final no debe empezar con "V-"';
+      }
+
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment': comment,
+      };
+    }
+
+    // 4. Extraer códigos base
     final containerBase = containerCode.substring(2);
     final visualAidBase = visualAidCode.substring(2);
 
-    // 4. Determinar el tipo de validación según la presencia de '/'
+    // 5. Determinar el tipo de validación según la presencia de '/'
     return _validateBasedOnCombinations(
       containerBase,
       visualAidBase,

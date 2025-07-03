@@ -2,6 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vira/services/auth_service.dart';
 
+extension StringExtension on String {
+  String toTitleCase() {
+    return split(' ')
+        .map(
+          (word) =>
+              word.isNotEmpty
+                  ? word[0].toUpperCase() + word.substring(1).toLowerCase()
+                  : word,
+        )
+        .join(' ');
+  }
+}
+
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
 
@@ -11,13 +24,21 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-  final _loginController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  String? _selectedUserNickname;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cargar usuarios cuando se inicializa la vista
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthService>().loadScanUsers();
+    });
+  }
 
   @override
   void dispose() {
-    _loginController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -25,10 +46,8 @@ class _LoginViewState extends State<LoginView> {
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       final authService = context.read<AuthService>();
-      await authService.login(
-        _loginController.text.trim(),
-        _passwordController.text,
-      );
+
+      await authService.login(_selectedUserNickname!, _passwordController.text);
     }
   }
 
@@ -68,29 +87,74 @@ class _LoginViewState extends State<LoginView> {
                       ),
                     ),
                     SizedBox(height: isSmallScreen ? 24 : 48),
-                    TextFormField(
-                      controller: _loginController,
-                      decoration: InputDecoration(
-                        labelText: 'Usuario o Correo Electrónico',
-                        prefixIcon: Icon(
-                          Icons.person_outline,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        border: const OutlineInputBorder(),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                      ),
-                      keyboardType: TextInputType.text,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Por favor ingresa tu usuario o correo electrónico';
-                        }
-                        return null;
+
+                    // Selector de usuario
+                    Consumer<AuthService>(
+                      builder: (context, authService, child) {
+                        return DropdownButtonFormField<String>(
+                          value: _selectedUserNickname,
+                          decoration: InputDecoration(
+                            labelText: 'Seleccionar Usuario',
+                            prefixIcon: Icon(
+                              Icons.person_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            suffixIcon:
+                                authService.loadingUsers
+                                    ? Container(
+                                      width: 20,
+                                      height: 20,
+                                      padding: const EdgeInsets.all(12),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                      ),
+                                    )
+                                    : null,
+                          ),
+                          items:
+                              authService.scanUsers
+                                  .map(
+                                    (user) => DropdownMenuItem<String>(
+                                      value: user.nickname,
+                                      child: Text(user.name.toTitleCase()),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              authService.loadingUsers
+                                  ? null
+                                  : (value) {
+                                    setState(() {
+                                      _selectedUserNickname = value;
+                                    });
+                                  },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor selecciona un usuario';
+                            }
+                            return null;
+                          },
+                          isExpanded: true,
+                          hint:
+                              authService.loadingUsers
+                                  ? Text('Cargando usuarios...')
+                                  : Text('Selecciona un usuario'),
+                        );
                       },
                     ),
+
                     SizedBox(height: isSmallScreen ? 12 : 16),
+
+                    // Campo de contraseña
                     TextFormField(
                       controller: _passwordController,
                       decoration: InputDecoration(
@@ -126,7 +190,9 @@ class _LoginViewState extends State<LoginView> {
                         return null;
                       },
                     ),
+
                     SizedBox(height: isSmallScreen ? 24 : 32),
+
                     Consumer<AuthService>(
                       builder: (context, authService, child) {
                         return Column(
@@ -134,7 +200,10 @@ class _LoginViewState extends State<LoginView> {
                           children: [
                             ElevatedButton(
                               onPressed:
-                                  authService.isLoading ? null : _handleLogin,
+                                  authService.isLoading ||
+                                          _selectedUserNickname == null
+                                      ? null
+                                      : _handleLogin,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Theme.of(context).colorScheme.primary,
@@ -158,6 +227,7 @@ class _LoginViewState extends State<LoginView> {
                                       )
                                       : const Text('Iniciar Sesión'),
                             ),
+
                             if (authService.error != null) ...[
                               SizedBox(height: isSmallScreen ? 12 : 16),
                               Container(

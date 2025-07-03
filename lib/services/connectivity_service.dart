@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 enum ConnectivityStatus { checking, connected, disconnected }
 
 class ConnectivityService extends ChangeNotifier {
-  static const String _baseUrl = 'http://10.1.50.253:8000/api';
+  static const String _baseUrl = 'http://192.168.130.50:9080/api';
   static const Duration _timeout = Duration(seconds: 10);
 
   ConnectivityStatus _status = ConnectivityStatus.checking;

@@ -4,8 +4,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:vira/models/models.dart';
 
+class ScanUser {
+  final String nickname;
+  final String name;
+
+  ScanUser({required this.nickname, required this.name});
+
+  factory ScanUser.fromJson(Map<String, dynamic> json) {
+    return ScanUser(nickname: json['nickname'] ?? '', name: json['name'] ?? '');
+  }
+}
+
 class AuthService extends ChangeNotifier {
-  static const String _baseUrl = 'http://10.1.50.253:8000/api';
+  static const String _baseUrl = 'http://192.168.130.50:9080/api';
   static const _storage = FlutterSecureStorage();
 
   User? _user;
@@ -13,6 +24,8 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = true;
   bool _isLoggingOut = false;
   String? _error;
+  List<ScanUser> _scanUsers = [];
+  bool _loadingUsers = false;
 
   User? get user => _user;
   String? get token => _token;
@@ -20,6 +33,8 @@ class AuthService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoggingOut => _isLoggingOut;
   String? get error => _error;
+  List<ScanUser> get scanUsers => _scanUsers;
+  bool get loadingUsers => _loadingUsers;
 
   AuthService() {
     _initializeAuth();
@@ -36,6 +51,31 @@ class AuthService extends ChangeNotifier {
       debugPrint('Error initializing auth: $e');
     } finally {
       _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadScanUsers() async {
+    try {
+      _loadingUsers = true;
+      notifyListeners();
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/scan-users'),
+        headers: {'Accept': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> usersData = jsonDecode(response.body);
+        _scanUsers = usersData.map((user) => ScanUser.fromJson(user)).toList();
+      } else {
+        _error = 'Error al cargar usuarios';
+      }
+    } catch (e) {
+      _error = 'Error de conexión al cargar usuarios';
+      debugPrint('Error loading scan users: $e');
+    } finally {
+      _loadingUsers = false;
       notifyListeners();
     }
   }
@@ -89,7 +129,7 @@ class AuthService extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/user'), // Cambio de endpoint
+        Uri.parse('$_baseUrl/user'),
         headers: {
           'Authorization': 'Bearer $_token',
           'Accept': 'application/json',
@@ -104,7 +144,6 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
-      // Si hay error cargando datos del usuario, hacer logout
       await logout();
     }
   }
@@ -132,6 +171,7 @@ class AuthService extends ChangeNotifier {
       _token = null;
       _error = null;
       _isLoggingOut = false;
+      _scanUsers.clear();
       await _storage.delete(key: 'auth_token');
       notifyListeners();
     }
