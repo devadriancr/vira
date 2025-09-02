@@ -2,20 +2,27 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:vira/services/http_interceptor.dart';
 
 class MaterialValidationController {
-  static const String _baseUrl = 'http://192.168.130.50:9080/api';
-  static const _storage = FlutterSecureStorage();
+  static const String _baseUrl = 'http://192.168.120.17:8000/api';
 
   static Future<Map<String, dynamic>> validate(
     String containerCode,
     String visualAidCode,
     String finalLabelCode,
   ) async {
+    if (finalLabelCode.length <= 30) {
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment':
+            'La etiqueta final debe tener más de 30 caracteres',
+      };
+    }
+
     // 1. Verificar si hay campos vacíos (automáticamente NG)
     if (containerCode.isEmpty ||
         visualAidCode.isEmpty ||
@@ -235,6 +242,7 @@ class MaterialValidationController {
     return [prefix1 + suffix, prefix2 + suffix];
   }
 
+  // 📡 MÉTODO ACTUALIZADO PARA USAR HTTP INTERCEPTOR
   static Future<List<String>?> sendValidationToAPI({
     required String containerCode,
     required String visualAidCode,
@@ -244,11 +252,6 @@ class MaterialValidationController {
     required String? validationComment,
   }) async {
     try {
-      final token = await _storage.read(key: 'auth_token');
-      if (token == null) {
-        throw Exception('No hay token de autenticación');
-      }
-
       // Obtener información del dispositivo
       final deviceInfo = DeviceInfoPlugin();
       String deviceModel = 'Desconocido';
@@ -267,7 +270,7 @@ class MaterialValidationController {
         deviceName = ios.name;
       }
 
-      // ✅ Verificar permisos ya solicitados (no los pedimos aquí)
+      // Verificar permisos ya solicitados
       final locationPermission = await Permission.location.isGranted;
       bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
 
@@ -279,7 +282,7 @@ class MaterialValidationController {
         print("⚠️ La ubicación del dispositivo está desactivada.");
       }
 
-      // ✅ Obtener IP y MAC (BSSID del router Wi-Fi)
+      // Obtener IP y MAC (BSSID del router Wi-Fi)
       final networkInfo = NetworkInfo();
       String? ipAddress = await networkInfo.getWifiIP();
       String? macAddress =
@@ -287,7 +290,7 @@ class MaterialValidationController {
               ? await networkInfo.getWifiBSSID()
               : null;
 
-      // 🌐 Enviar datos al backend
+      // Enviar datos al backend usando el interceptor
       final body = {
         'container_code': containerCode,
         'visual_aid_code': visualAidCode,
@@ -305,13 +308,8 @@ class MaterialValidationController {
         body['validation_comment'] = validationComment;
       }
 
-      final response = await http.post(
+      final response = await HttpInterceptor.post(
         Uri.parse('$_baseUrl/material-validations'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
         body: jsonEncode(body),
       );
 
@@ -337,17 +335,13 @@ class MaterialValidationController {
     return null;
   }
 
+  // 📊 MÉTODO ACTUALIZADO PARA USAR HTTP INTERCEPTOR
   static Future<List<Map<String, dynamic>>> getValidationHistory({
     int? workCenterId,
     String? status,
     int limit = 50,
   }) async {
     try {
-      final token = await _storage.read(key: 'auth_token');
-      if (token == null) {
-        throw Exception('No hay token de autenticación');
-      }
-
       final queryParams = <String, String>{'limit': limit.toString()};
 
       if (workCenterId != null) {
@@ -362,13 +356,7 @@ class MaterialValidationController {
         '$_baseUrl/material-validations',
       ).replace(queryParameters: queryParams);
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await HttpInterceptor.get(uri);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

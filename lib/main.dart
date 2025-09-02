@@ -87,7 +87,6 @@ class _AppRouterState extends State<AppRouter> {
   @override
   void initState() {
     super.initState();
-    // Inicializar permisos cuando se carga la app
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PermissionService>().initializePermissions();
     });
@@ -97,6 +96,10 @@ class _AppRouterState extends State<AppRouter> {
   Widget build(BuildContext context) {
     return Consumer2<AuthService, PermissionService>(
       builder: (context, authService, permissionService, child) {
+        if (authService.sessionExpired) {
+          return const LoginView();
+        }
+
         // Mostrar SplashView mientras se cargan los servicios o permisos
         if (authService.isLoading ||
             authService.isLoggingOut ||

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vira/controllers/material_validation_controller.dart';
 import 'package:vira/views/validation_history_view.dart';
-import 'package:vira/views/profile_view.dart'; // Importar la nueva vista
+import 'package:vira/views/profile_view.dart';
 import 'package:vira/views/result_view.dart';
 import 'package:vira/services/auth_service.dart';
 
@@ -177,6 +177,11 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     if (value == null || value.isEmpty) {
       return 'La etiqueta final no puede estar vacía.';
     }
+
+    if (value.length <= 30) {
+      return 'La etiqueta final debe tener más de 30 caracteres.';
+    }
+
     return null;
   }
 

@@ -1,3 +1,4 @@
+// lib/views/login_view.dart (actualizado - solo mostrar los cambios principales)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vira/services/auth_service.dart';
@@ -33,7 +34,43 @@ class _LoginViewState extends State<LoginView> {
     super.initState();
     // Cargar usuarios cuando se inicializa la vista
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthService>().loadScanUsers();
+      final authService = context.read<AuthService>();
+      authService.loadScanUsers();
+
+      // Si hay sesión expirada, mostrar mensaje
+      if (authService.sessionExpired) {
+        _showSessionExpiredDialog();
+      }
+    });
+  }
+
+  void _showSessionExpiredDialog() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder:
+              (context) => AlertDialog(
+                icon: Icon(Icons.schedule, color: Colors.orange, size: 48),
+                title: Text('Sesión Expirada'),
+                content: Text(
+                  'Tu sesión ha caducado por seguridad. Por favor, inicia sesión nuevamente.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Limpiar el error después de cerrar el diálogo
+                      context.read<AuthService>().clearError();
+                    },
+                    child: Text('Entendido'),
+                  ),
+                ],
+              ),
+        );
+      }
     });
   }
 
@@ -228,7 +265,9 @@ class _LoginViewState extends State<LoginView> {
                                       : const Text('Iniciar Sesión'),
                             ),
 
-                            if (authService.error != null) ...[
+                            // Mostrar mensaje de error (incluyendo sesión expirada)
+                            if (authService.error != null &&
+                                !authService.sessionExpired) ...[
                               SizedBox(height: isSmallScreen ? 12 : 16),
                               Container(
                                 padding: const EdgeInsets.all(12),

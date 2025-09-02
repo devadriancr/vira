@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:vira/models/models.dart';
+import 'package:vira/services/http_interceptor.dart';
 
 class ScanUser {
   final String nickname;
@@ -16,7 +16,7 @@ class ScanUser {
 }
 
 class AuthService extends ChangeNotifier {
-  static const String _baseUrl = 'http://192.168.130.50:9080/api';
+  static const String _baseUrl = 'http://192.168.120.17:8000/api';
   static const _storage = FlutterSecureStorage();
 
   User? _user;
@@ -26,18 +26,38 @@ class AuthService extends ChangeNotifier {
   String? _error;
   List<ScanUser> _scanUsers = [];
   bool _loadingUsers = false;
+  bool _sessionExpired = false; // Nueva variable para manejar expiración
 
   User? get user => _user;
   String? get token => _token;
-  bool get isAuthenticated => _user != null && _token != null;
+  bool get isAuthenticated =>
+      _user != null && _token != null && !_sessionExpired;
   bool get isLoading => _isLoading;
   bool get isLoggingOut => _isLoggingOut;
   String? get error => _error;
   List<ScanUser> get scanUsers => _scanUsers;
   bool get loadingUsers => _loadingUsers;
+  bool get sessionExpired => _sessionExpired;
 
   AuthService() {
     _initializeAuth();
+
+    // Configurar el callback para manejar expiración de sesión
+    HttpInterceptor.setOnSessionExpired(() {
+      _handleSessionExpired();
+    });
+  }
+
+  /// Maneja la expiración de sesión
+  void _handleSessionExpired() {
+    if (_isLoggingOut) return;
+
+    _sessionExpired = true;
+    _user = null;
+    _token = null;
+    _error =
+        'Tu sesión ha expirado por inactividad. Por favor, inicia sesión nuevamente.';
+    notifyListeners();
   }
 
   Future<void> _initializeAuth() async {
@@ -60,9 +80,8 @@ class AuthService extends ChangeNotifier {
       _loadingUsers = true;
       notifyListeners();
 
-      final response = await http.get(
+      final response = await HttpInterceptor.get(
         Uri.parse('$_baseUrl/scan-users'),
-        headers: {'Accept': 'application/json'},
       );
 
       if (response.statusCode == 200) {
@@ -84,9 +103,10 @@ class AuthService extends ChangeNotifier {
     try {
       _error = null;
       _isLoading = true;
+      _sessionExpired = false; // Resetear el flag de expiración
       notifyListeners();
 
-      final response = await http.post(
+      final response = await HttpInterceptor.post(
         Uri.parse('$_baseUrl/login'),
         headers: {
           'Content-Type': 'application/json',
@@ -128,23 +148,17 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _loadUserData() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/user'),
-        headers: {
-          'Authorization': 'Bearer $_token',
-          'Accept': 'application/json',
-        },
-      );
+      final response = await HttpInterceptor.get(Uri.parse('$_baseUrl/user'));
 
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body);
         _user = User.fromJson(userData);
       } else if (response.statusCode == 401) {
-        await logout();
+        // El interceptor ya manejará esto
+        return;
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
-      await logout();
     }
   }
 
@@ -156,13 +170,7 @@ class AuthService extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (_token != null) {
-        await http.post(
-          Uri.parse('$_baseUrl/logout'),
-          headers: {
-            'Authorization': 'Bearer $_token',
-            'Accept': 'application/json',
-          },
-        );
+        await HttpInterceptor.post(Uri.parse('$_baseUrl/logout'));
       }
     } catch (e) {
       debugPrint('Error during logout: $e');
@@ -171,6 +179,7 @@ class AuthService extends ChangeNotifier {
       _token = null;
       _error = null;
       _isLoggingOut = false;
+      _sessionExpired = false;
       _scanUsers.clear();
       await _storage.delete(key: 'auth_token');
       notifyListeners();
