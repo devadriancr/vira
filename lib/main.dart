@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
-import 'services/permission_service.dart'; // Importar el nuevo servicio
+import 'services/permission_service.dart';
 import 'views/splash_view.dart';
 import 'views/login_view.dart';
 import 'views/material_validation_view.dart';
@@ -21,9 +21,7 @@ class ViraApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => ConnectivityService()),
         ChangeNotifierProvider(create: (context) => AuthService()),
-        ChangeNotifierProvider(
-          create: (context) => PermissionService(),
-        ), // Agregar el servicio de permisos
+        ChangeNotifierProvider(create: (context) => PermissionService()),
       ],
       child: MaterialApp(
         title: 'Vira',
@@ -89,18 +87,34 @@ class _AppRouterState extends State<AppRouter> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PermissionService>().initializePermissions();
+      _checkTokenOnStartup();
     });
+  }
+
+  Future<void> _checkTokenOnStartup() async {
+    final authService = context.read<AuthService>();
+
+    // Si hay token pero está expirado, limpiar
+    if (authService.isTokenExpired && authService.token != null) {
+      authService.handleSessionExpired();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<AuthService, PermissionService>(
       builder: (context, authService, permissionService, child) {
+        // Verificar expiración en cada build
+        if (authService.isTokenExpired && authService.token != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            authService.handleSessionExpired();
+          });
+        }
+
         if (authService.sessionExpired) {
           return const LoginView();
         }
 
-        // Mostrar SplashView mientras se cargan los servicios o permisos
         if (authService.isLoading ||
             authService.isLoggingOut ||
             !permissionService.permissionsChecked) {

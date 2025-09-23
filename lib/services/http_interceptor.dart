@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class HttpInterceptor {
   static const _storage = FlutterSecureStorage();
-  static Function? onSessionExpired; // Callback para manejar expiración
+  static Function? onSessionExpired;
 
   /// Realiza una petición GET con manejo automático de expiración
   static Future<http.Response> get(
@@ -58,6 +58,7 @@ class HttpInterceptor {
 
     // Limpiar el storage
     await _storage.delete(key: 'auth_token');
+    await _storage.delete(key: 'token_expiry');
 
     // Llamar al callback si existe
     if (onSessionExpired != null) {

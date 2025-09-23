@@ -135,16 +135,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             ),
           );
 
-          // if (accessErrors != null && accessErrors.isNotEmpty) {
-          //   ScaffoldMessenger.of(context).showSnackBar(
-          //     SnackBar(
-          //       content: Text(accessErrors.join('\n')),
-          //       backgroundColor: Colors.orange,
-          //       duration: const Duration(seconds: 2),
-          //     ),
-          //   );
-          // }
-
           _resetForm();
         }
       } catch (e) {
@@ -233,14 +223,6 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                 },
                 itemBuilder:
                     (BuildContext context) => <PopupMenuEntry<String>>[
-                      // const PopupMenuItem<String>(
-                      //   value: 'profile',
-                      //   child: ListTile(
-                      //     leading: Icon(Icons.person),
-                      //     title: Text('Perfil'),
-                      //     contentPadding: EdgeInsets.zero,
-                      //   ),
-                      // ),
                       const PopupMenuItem<String>(
                         value: 'history',
                         child: ListTile(

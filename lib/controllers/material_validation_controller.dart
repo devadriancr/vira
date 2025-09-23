@@ -7,7 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:vira/services/http_interceptor.dart';
 
 class MaterialValidationController {
-  static const String _baseUrl = 'http://192.168.120.17:8000/api';
+  static const String _baseUrl = 'http://192.168.130.50:9080/api';
 
   static Future<Map<String, dynamic>> validate(
     String containerCode,

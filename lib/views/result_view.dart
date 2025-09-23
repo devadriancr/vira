@@ -5,10 +5,8 @@ import 'package:vira/main.dart';
 class ResultView extends StatefulWidget {
   final bool isValid;
   final bool hasConnectionError;
-  final String?
-  errorMessage; // Nuevo parámetro para el mensaje de error de la API
-  final List<String>?
-  apiErrors; // Nuevo parámetro para errores específicos de la API
+  final String? errorMessage;
+  final List<String>? apiErrors;
 
   const ResultView({
     super.key,
@@ -40,11 +38,9 @@ class _ResultViewState extends State<ResultView> {
 
   void _validateCode() {
     if (_codeController.text == '9876') {
-      // Código correcto, regresar a material_validation_view.dart
       if (!mounted) return;
       Navigator.pop(context);
     } else {
-      // Limpiar el campo y mostrar error
       _codeController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -76,12 +72,9 @@ class _ResultViewState extends State<ResultView> {
 
   @override
   Widget build(BuildContext context) {
-    // BLOQUEO TOTAL: Si es NG y no está desbloqueado, mostrar pantalla de código
     if (!widget.isValid && !_isUnlocked) {
       return _buildLockedScreen();
     }
-
-    // Pantallas normales (OK, NG desbloqueado, o error de conexión)
     return _buildResultScreen();
   }
 
@@ -91,71 +84,93 @@ class _ResultViewState extends State<ResultView> {
     final ngColor = customColors?.ngColor ?? const Color(0xFFFF0000);
 
     return WillPopScope(
-      // BLOQUEO TOTAL - No permite salir de ninguna manera
       onWillPop: () async => false,
       child: Scaffold(
         backgroundColor: ngColor,
         body: PopScope(
-          // También bloquea el gesto de deslizar hacia atrás en iOS
           canPop: false,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Texto NG grande
-                  Text(
-                    'NG',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 200,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: Offset(3, 3),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Calcular tamaño de fuente responsivo basado en el ancho de la pantalla
+              double responsiveFontSize = constraints.maxWidth * 0.4;
+              if (responsiveFontSize > 200) responsiveFontSize = 200;
+              if (responsiveFontSize < 100) responsiveFontSize = 100;
+
+              return SingleChildScrollView(
+                // Permitir scroll en pantallas pequeñas
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Texto NG con tamaño responsivo
+                      Container(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight * 0.5,
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 50),
-                  // Campo de código
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
+                        child: Center(
+                          child: Text(
+                            'NG',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: responsiveFontSize,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: Offset(3, 3),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _validateCode(),
-                      style: TextStyle(color: ngColor, fontSize: 20),
-                      decoration: InputDecoration(
-                        hintText: 'Ingrese Código',
-                        hintStyle: TextStyle(color: ngColor),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 18),
                       ),
-                    ),
+                      const SizedBox(height: 30),
+                      // Campo de código
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: _codeController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _validateCode(),
+                          style: TextStyle(color: ngColor, fontSize: 20),
+                          decoration: InputDecoration(
+                            hintText: 'Ingrese Código',
+                            hintStyle: TextStyle(color: ngColor),
+                            filled: true,
+                            fillColor: Colors.white,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 16,
+                              horizontal: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: MediaQuery.of(context).viewInsets.bottom + 20,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -177,7 +192,6 @@ class _ResultViewState extends State<ResultView> {
       displayText = 'ERROR DE CONEXIÓN';
       showBackButton = true;
 
-      // Mostrar el mensaje de error específico si está disponible
       if (widget.errorMessage != null) {
         subtitleText = widget.errorMessage;
       } else if (widget.apiErrors != null && widget.apiErrors!.isNotEmpty) {
@@ -199,99 +213,114 @@ class _ResultViewState extends State<ResultView> {
       onWillPop: () async => showBackButton,
       child: Scaffold(
         backgroundColor: backgroundColor,
-        body: Stack(
-          children: [
-            // Contenido principal
-            Center(
-              child:
-                  widget.hasConnectionError
-                      ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            // Tamaño de fuente responsivo para la pantalla de resultados
+            double responsiveFontSize = constraints.maxWidth * 0.3;
+            if (responsiveFontSize > 200) responsiveFontSize = 200;
+            if (responsiveFontSize < 80) responsiveFontSize = 80;
+
+            return Stack(
+              children: [
+                // Contenido principal
+                Center(
+                  child:
+                      widget.hasConnectionError
+                          ? SingleChildScrollView(
                             padding: EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.wifi_off_rounded,
-                              size: 80,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 30),
-                          Text(
-                            displayText,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: Offset(2, 2),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.wifi_off_rounded,
+                                    size: 80,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 30),
+                                Text(
+                                  displayText,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        blurRadius: 10,
+                                        offset: Offset(2, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                  child: Text(
+                                    subtitleText ?? 'Error desconocido',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w300,
+                                      height: 1.4,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 15),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Text(
-                              subtitleText ?? 'Error desconocido',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w300,
-                                height: 1.4,
-                              ),
+                          )
+                          : Text(
+                            displayText,
+                            style: TextStyle(
+                              fontSize: responsiveFontSize,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: Offset(3, 3),
+                                ),
+                              ],
                             ),
+                            textAlign: TextAlign.center,
                           ),
-                        ],
-                      )
-                      : Text(
-                        displayText,
-                        style: TextStyle(
-                          fontSize: 200,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(3, 3),
-                            ),
-                          ],
-                        ),
-                      ),
-            ),
-            // Botón de regresar (solo si está permitido)
-            if (showBackButton)
-              Positioned(
-                bottom: 20,
-                left: 20,
-                right: 20,
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.95),
-                    foregroundColor: backgroundColor,
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    elevation: 8,
-                  ),
-                  icon: Icon(Icons.arrow_back_rounded, size: 24),
-                  label: Text(
-                    'REGRESAR',
-                    style: TextStyle(fontSize: 16, letterSpacing: 1.0),
-                  ),
                 ),
-              ),
-          ],
+                // Botón de regresar
+                if (showBackButton)
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.95),
+                        foregroundColor: backgroundColor,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        elevation: 8,
+                      ),
+                      icon: Icon(Icons.arrow_back_rounded, size: 24),
+                      label: Text(
+                        'REGRESAR',
+                        style: TextStyle(fontSize: 16, letterSpacing: 1.0),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
