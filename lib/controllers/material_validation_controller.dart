@@ -9,92 +9,142 @@ import 'package:vira/services/http_interceptor.dart';
 class MaterialValidationController {
   static const String _baseUrl = 'http://192.168.130.50:9080/api';
 
+  /// Valida los códigos de material según las reglas de negocio
   static Future<Map<String, dynamic>> validate(
     String containerCode,
     String visualAidCode,
     String finalLabelCode,
   ) async {
+    // 1. Verificar longitud mínima de etiqueta final
     if (finalLabelCode.length <= 30) {
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment':
-            'La etiqueta final debe tener más de 30 caracteres',
+        'validationComment': 'Orden Incorrecto',
       };
     }
 
-    // 1. Verificar si hay campos vacíos (automáticamente NG)
+    // 2. Verificar si hay campos vacíos (automáticamente NG)
     if (containerCode.isEmpty ||
         visualAidCode.isEmpty ||
         finalLabelCode.isEmpty) {
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment': 'Uno o más campos están vacíos',
+        'validationComment': 'Orden Incorrecto',
       };
     }
 
-    // 2. Verificar formatos correctos (C- y V-)
+    // 3. Verificar formatos correctos (C- y V-)
     final containerValid =
         containerCode.startsWith('C-') && containerCode.length > 2;
     final visualAidValid =
         visualAidCode.startsWith('V-') && visualAidCode.length > 2;
 
     if (!containerValid || !visualAidValid) {
-      String comment = '';
-      if (!containerValid && !visualAidValid) {
-        comment =
-            'No se ingresaron correctamente el contenedor y la ayuda visual';
-      } else if (!containerValid) {
-        comment =
-            'No se ingresaron correctamente el contenedor, debe empezar con "C-"';
-      } else {
-        comment =
-            'No se ingresaron correctamente la ayuda visual, debe empezar con "V-"';
-      }
-
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment': comment,
+        'validationComment': 'Orden Incorrecto',
       };
     }
 
-    // 3. Verificar que finalLabelCode NO inicie con C- o V-
+    // 4. Verificar que finalLabelCode NO inicie con C- o V-
     final finalLabelStartsWithC = finalLabelCode.startsWith('C-');
     final finalLabelStartsWithV = finalLabelCode.startsWith('V-');
 
     if (finalLabelStartsWithC || finalLabelStartsWithV) {
-      String comment = '';
-      if (finalLabelStartsWithC && finalLabelStartsWithV) {
-        // Esto técnicamente no puede pasar, pero por completitud
-        comment = 'La etiqueta final no debe empezar con "C-" o "V-"';
-      } else if (finalLabelStartsWithC) {
-        comment = 'La etiqueta final no debe empezar con "C-"';
-      } else {
-        comment = 'La etiqueta final no debe empezar con "V-"';
-      }
-
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment': comment,
+        'validationComment': 'Orden Incorrecto',
       };
     }
 
-    // 4. Extraer códigos base
+    // 5. Determinar el tipo de validación según la presencia de '/'
     final containerBase = containerCode.substring(2);
     final visualAidBase = visualAidCode.substring(2);
 
-    // 5. Determinar el tipo de validación según la presencia de '/'
-    return _validateBasedOnCombinations(
+    // Ejecutar validaciones estructurales/combinacionales PRIMERO
+    final structuralResult = _validateBasedOnCombinations(
       containerBase,
       visualAidBase,
       finalLabelCode,
     );
+
+    // Si fallaron las validaciones estructurales, devolvemos ese resultado y
+    // NO ejecutamos la validación de secuencia (que ahora es la última)
+    if (!structuralResult['isValid']) {
+      return structuralResult;
+    }
+
+    // Si las validaciones anteriores pasaron, ejecutamos la validación de secuencia (API)
+    final sequenceValidation = await _validateFinalLabelSequence(
+      finalLabelCode,
+    );
+
+    // Si la secuencia falla, devolvemos la info de secuencia (displayMessage, expectedOrder, validationComment)
+    if (!sequenceValidation['isValid']) {
+      return sequenceValidation;
+    }
+
+    // Si la secuencia pasa, devolvemos resultado combinado:
+    // - isValid verdadero
+    // - partNumber lo tomamos del resultado estructural (si existe)
+    // - validationComment puede venir de sequenceValidation (normalmente null si ok)
+    return {
+      'isValid': true,
+      'partNumber': structuralResult['partNumber'],
+      'validationComment': sequenceValidation['validationComment'],
+      'displayMessage': sequenceValidation['displayMessage'],
+      'expectedOrder': sequenceValidation['expectedOrder'],
+      'currentOrder': sequenceValidation['currentOrder'],
+    };
   }
 
-  /// Valida según los diferentes casos de combinaciones
+  /// Valida la secuencia de la etiqueta final mediante API
+  /// Devuelve validationComment para BD y displayMessage para UI
+  static Future<Map<String, dynamic>> _validateFinalLabelSequence(
+    String finalLabelCode,
+  ) async {
+    try {
+      final response = await HttpInterceptor.post(
+        Uri.parse('$_baseUrl/validate-sequence'),
+        body: jsonEncode({'final_label_code': finalLabelCode}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        return {
+          'isValid': data['isValid'] ?? false,
+          'partNumber': null,
+          'validationComment': data['validationComment'], // Para guardar en BD
+          'displayMessage': data['displayMessage'] ?? data['validationComment'],
+          'expectedOrder': data['expectedOrder'], // Orden esperada (opcional)
+          'currentOrder': data['currentOrder'], // Orden actual (opcional)
+        };
+      } else {
+        return {
+          'isValid': false,
+          'partNumber': null,
+          'validationComment':
+              'Error en la validación de secuencia: ${response.statusCode}',
+          'displayMessage':
+              'Error en la validación de secuencia: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'isValid': false,
+        'partNumber': null,
+        'validationComment': 'Error de conexión en la validación de secuencia',
+        'displayMessage': 'Error de conexión en la validación de secuencia',
+      };
+    }
+  }
+
+  /// Determina el tipo de validación basado en las combinaciones de códigos
   static Map<String, dynamic> _validateBasedOnCombinations(
     String containerBase,
     String visualAidBase,
@@ -119,7 +169,7 @@ class MaterialValidationController {
     }
   }
 
-  /// Caso 2: Validación directa cuando ambos tienen '/'
+  /// Valida coincidencia directa cuando ambos códigos contienen '/'
   static Map<String, dynamic> _validateDirectMatch(
     String containerBase,
     String visualAidBase,
@@ -130,8 +180,7 @@ class MaterialValidationController {
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment':
-            'El número de parte del contenedor y ayuda visual no coinciden',
+        'validationComment': 'Mal Etiquetado',
       };
     }
 
@@ -140,14 +189,11 @@ class MaterialValidationController {
     return {
       'isValid': containsPart,
       'partNumber': containsPart ? containerBase : null,
-      'validationComment':
-          containsPart
-              ? null
-              : 'El número de parte "$containerBase" no se encuentra en la etiqueta final',
+      'validationComment': containsPart ? null : 'Mal Etiquetado',
     };
   }
 
-  /// Caso 1: Validación con combinaciones cuando solo el contenedor tiene '/'
+  /// Valida generando combinaciones cuando solo el contenedor tiene '/'
   static Map<String, dynamic> _validateWithCombinations(
     String containerBase,
     String visualAidBase,
@@ -164,10 +210,7 @@ class MaterialValidationController {
         return {
           'isValid': containsPart,
           'partNumber': containsPart ? combination : null,
-          'validationComment':
-              containsPart
-                  ? null
-                  : 'El número de parte "$combination" no se encuentra en la etiqueta final',
+          'validationComment': containsPart ? null : 'Mal Etiquetado',
         };
       }
     }
@@ -175,12 +218,11 @@ class MaterialValidationController {
     return {
       'isValid': false,
       'partNumber': null,
-      'validationComment':
-          'El número de parte de la ayuda visual "$visualAidBase" no coincide con ninguna combinación del contenedor',
+      'validationComment': 'Mal Etiquetado',
     };
   }
 
-  /// Caso original: Validación tradicional sin '/'
+  /// Validación tradicional para códigos sin '/'
   static Map<String, dynamic> _validateTraditional(
     String containerBase,
     String visualAidBase,
@@ -191,20 +233,16 @@ class MaterialValidationController {
       return {
         'isValid': false,
         'partNumber': null,
-        'validationComment':
-            'El número de parte del contenedor "$containerBase" y ayuda visual "$visualAidBase" no coinciden',
+        'validationComment': 'Mal Etiquetado',
       };
     }
 
     // Verificar que el código base esté en la etiqueta final
-    final containsPart = finalLabelCode.contains(containerBase);
+    final containsPart = finalLabelCode.contains(containerBase.trim());
     return {
       'isValid': containsPart,
       'partNumber': containsPart ? containerBase : null,
-      'validationComment':
-          containsPart
-              ? null
-              : 'El número de parte "$containerBase" no se encuentra en la etiqueta final',
+      'validationComment': containsPart ? null : 'Mal Etiquetado',
     };
   }
 
@@ -242,7 +280,7 @@ class MaterialValidationController {
     return [prefix1 + suffix, prefix2 + suffix];
   }
 
-  // 📡 MÉTODO ACTUALIZADO PARA USAR HTTP INTERCEPTOR
+  /// Envía los resultados de validación a la API con información del dispositivo
   static Future<List<String>?> sendValidationToAPI({
     required String containerCode,
     required String visualAidCode,
@@ -270,17 +308,9 @@ class MaterialValidationController {
         deviceName = ios.name;
       }
 
-      // Verificar permisos ya solicitados
+      // Verificar permisos de ubicación
       final locationPermission = await Permission.location.isGranted;
       bool isLocationEnabled = await Geolocator.isLocationServiceEnabled();
-
-      if (!locationPermission) {
-        print("⚠️ Permiso de ubicación no concedido previamente.");
-      }
-
-      if (!isLocationEnabled) {
-        print("⚠️ La ubicación del dispositivo está desactivada.");
-      }
 
       // Obtener IP y MAC (BSSID del router Wi-Fi)
       final networkInfo = NetworkInfo();
@@ -290,7 +320,7 @@ class MaterialValidationController {
               ? await networkInfo.getWifiBSSID()
               : null;
 
-      // Enviar datos al backend usando el interceptor
+      // Preparar datos para enviar a la API
       final body = {
         'container_code': containerCode,
         'visual_aid_code': visualAidCode,
@@ -308,6 +338,7 @@ class MaterialValidationController {
         body['validation_comment'] = validationComment;
       }
 
+      // Enviar datos usando el interceptor HTTP
       final response = await HttpInterceptor.post(
         Uri.parse('$_baseUrl/material-validations'),
         body: jsonEncode(body),
@@ -315,7 +346,6 @@ class MaterialValidationController {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        print('✅ Validación enviada exitosamente: ${data['message']}');
         if (data['access_errors'] != null) {
           return List<String>.from(data['access_errors']);
         }
@@ -328,14 +358,13 @@ class MaterialValidationController {
         throw Exception('Error del servidor: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error enviando validación a la API: $e');
       rethrow;
     }
 
     return null;
   }
 
-  // 📊 MÉTODO ACTUALIZADO PARA USAR HTTP INTERCEPTOR
+  /// Obtiene el historial de validaciones desde la API
   static Future<List<Map<String, dynamic>>> getValidationHistory({
     int? workCenterId,
     String? status,
@@ -367,7 +396,6 @@ class MaterialValidationController {
         );
       }
     } catch (e) {
-      print('Error obteniendo historial: $e');
       rethrow;
     }
   }

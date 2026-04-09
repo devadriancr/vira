@@ -29,6 +29,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
   @override
   void initState() {
     super.initState();
+    // Configura el foco inicial después del primer renderizado
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _firstBuild) {
         _finalLabelFocus.requestFocus();
@@ -39,6 +40,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
 
   @override
   void dispose() {
+    // Limpia todos los controladores y focus nodes
     _finalLabelController.dispose();
     _visualAidController.dispose();
     _containerController.dispose();
@@ -48,11 +50,13 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     super.dispose();
   }
 
+  /// Maneja el cambio de foco entre campos del formulario
   void _fieldFocusChange(FocusNode current, FocusNode next) {
     current.unfocus();
     FocusScope.of(context).requestFocus(next);
   }
 
+  /// Reinicia el formulario a su estado inicial
   void _resetForm() {
     _formKey.currentState?.reset();
     _finalLabelController.clear();
@@ -65,6 +69,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     });
   }
 
+  /// Maneja el proceso de cierre de sesión con confirmación
   Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -90,6 +95,8 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     }
   }
 
+  /// Valida y envía el formulario de validación de materiales
+  /// Valida y envía el formulario de validación de materiales
   Future<void> _validateAndSubmit() async {
     if (_formKey.currentState!.validate() && !_isSubmitting) {
       setState(() {
@@ -101,6 +108,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
       final finalLabelCode = _finalLabelController.text;
 
       try {
+        // Realiza la validación del material
         final validationResult = await MaterialValidationController.validate(
           containerCode,
           visualAidCode,
@@ -111,7 +119,55 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
         final partNumber = validationResult['partNumber'] as String?;
         final validationComment =
             validationResult['validationComment'] as String?;
+        final displayMessage = validationResult['displayMessage'] as String?;
 
+        final messageToShow =
+            (displayMessage?.isNotEmpty == true)
+                ? displayMessage
+                : validationComment;
+
+        // MOSTRAR NOTIFICACIÓN PERSISTENTE CON BOTÓN DE CERRAR
+        if (messageToShow != null && messageToShow.isNotEmpty) {
+          final snackBar = SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.red.shade700, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    messageToShow,
+                    style: TextStyle(
+                      color: Colors.red.shade900,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: Colors.red.shade700, size: 20),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade50,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            duration: const Duration(days: 1), // Duración muy larga
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.shade700, width: 1.5),
+            ),
+            elevation: 3,
+            // Eliminar el dismissDirection para evitar que se cierre deslizando
+            dismissDirection: DismissDirection.none,
+          );
+
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+
+        // Envía los resultados a la API
         final accessErrors =
             await MaterialValidationController.sendValidationToAPI(
               containerCode: containerCode,
@@ -130,14 +186,18 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                   (context) => ResultView(
                     isValid: isValid,
                     hasConnectionError: false,
+                    errorMessage: messageToShow,
                     apiErrors: accessErrors,
                   ),
             ),
           );
 
+          // Ocultar el SnackBar cuando se regrese de ResultView
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           _resetForm();
         }
       } catch (e) {
+        // Maneja errores de conexión o validación
         if (mounted) {
           await Navigator.push(
             context,
@@ -151,6 +211,8 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
             ),
           );
 
+          // Ocultar el SnackBar cuando se regrese de ResultView
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           Future.delayed(const Duration(milliseconds: 1000), _resetForm);
         }
       } finally {
@@ -163,6 +225,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     }
   }
 
+  /// Valida que la etiqueta final cumpla con los requisitos
   String? _validateFinalLabel(String? value) {
     if (value == null || value.isEmpty) {
       return 'La etiqueta final no puede estar vacía.';
@@ -175,6 +238,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     return null;
   }
 
+  /// Valida que la ayuda visual no esté vacía
   String? _validateVisualAid(String? value) {
     if (value == null || value.isEmpty) {
       return 'La ayuda visual no puede estar vacía.';
@@ -182,6 +246,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
     return null;
   }
 
+  /// Valida que el contenedor no esté vacío
   String? _validateContainer(String? value) {
     if (value == null || value.isEmpty) {
       return 'El contenedor no puede estar vacío.';
@@ -355,7 +420,7 @@ class _MaterialValidationViewState extends State<MaterialValidationView> {
                   padding: EdgeInsets.only(
                     bottom:
                         MediaQuery.of(context).viewInsets.bottom > 0
-                            ? 16 // Mantenemos un padding mínimo cuando el teclado está visible
+                            ? 16 // Padding mínimo cuando el teclado está visible
                             : 24, // Más espacio cuando no hay teclado
                     top: 16,
                     left: 8,

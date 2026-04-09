@@ -6,7 +6,7 @@ enum ConnectivityStatus { checking, connected, disconnected }
 
 class ConnectivityService extends ChangeNotifier {
   static const String _baseUrl = 'http://192.168.130.50:9080/api';
-  static const Duration _timeout = Duration(seconds: 10);
+  static const Duration _timeout = Duration(seconds: 5);
 
   ConnectivityStatus _status = ConnectivityStatus.checking;
 
